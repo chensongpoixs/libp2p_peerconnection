@@ -22,12 +22,12 @@
 #ifndef _C_TRANSPORT_CONNECTIONER_H_
 #define _C_TRANSPORT_CONNECTIONER_H_
 #include "rtc_base/third_party/sigslot/sigslot.h"
-#include "p2p_peerconnection/csession_description.h"
-#include "ice/ice_transport_interface.h"
-#include "ice/dtls_transport.h"
-#include "p2p_peerconnection/connection_context.h"
-#include "ice/dtls_transport_internal.h"
-namespace libice
+#include "libp2p_peerconnection/csession_description.h"
+#include "libice/ice_transport_interface.h"
+#include "libice/dtls_transport.h"
+#include "libp2p_peerconnection/connection_context.h"
+#include "libice/dtls_transport_internal.h"
+namespace libp2p_peerconnection
 {
 	class transport_controller : public sigslot::has_slots<>
 	{
@@ -57,7 +57,7 @@ namespace libice
 			const std::string& transport_name, bool rtcp);
 
 		std::shared_ptr<libice::DtlsTransportInternal> CreateDtlsTransport(
-			libice::ContentInfo* content_info,
+			 ContentInfo* content_info,
 			libice::IceTransportInternal* ice);
 
 

@@ -33,32 +33,32 @@
 
 #include "absl/memory/memory.h"
 #include "api/crypto_params.h"
-#include "libmedia/media_types.h"
-#include "libmedia/rtp_parameters.h"
-#include "libmedia/rtp_transceiver_direction.h"
-#include "libmedia/rtp_transceiver_interface.h"
+#include "libmedia_transfer_protocol/media_types.h"
+#include "libmedia_transfer_protocol/rtp_parameters.h"
+#include "libmedia_transfer_protocol/rtp_transceiver_direction.h"
+#include "libmedia_transfer_protocol/rtp_transceiver_interface.h"
 //#include "media/base/codec.h"
 //#include "media/base/media_channel.h"
 //#include "media/base/media_constants.h"
 //#include "media/base/rid_description.h"
 //#include "media/base/stream_params.h"
-#include "ice/transport_description.h"
-#include "ice/transport_info.h"
-#include "libmedia/media_protocol_names.h"
-#include "p2p_peerconnection/simulcast_description.h"
+#include "libice/transport_description.h"
+#include "libice/transport_info.h"
+#include "libmedia_transfer_protocol/media_protocol_names.h"
+#include "libp2p_peerconnection/simulcast_description.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/socket_address.h"
 #include "rtc_base/system/rtc_export.h"
-#include "libmedia/ccodec.h"
-#include "libmedia/stream_params.h"
+#include "libmedia_transfer_protocol/ccodec.h"
+#include "libmedia_transfer_protocol/stream_params.h"
 #include "api/jsep.h"
-#include "libmedia/ccodec.h"
-namespace libice {
+#include "libmedia_transfer_protocol/ccodec.h"
+namespace libp2p_peerconnection {
 
-typedef std::vector<libmedia::AudioCodec> AudioCodecs;
-typedef std::vector<libmedia::VideoCodec> VideoCodecs;
+typedef std::vector<libmedia_transfer_protocol::AudioCodec> AudioCodecs;
+typedef std::vector<libmedia_transfer_protocol::VideoCodec> VideoCodecs;
 typedef std::vector<cricket::CryptoParams> CryptoParamsVec;
-typedef std::vector<libmedia::RtpExtension> RtpHeaderExtensions;
+typedef std::vector<libmedia_transfer_protocol::RtpExtension> RtpHeaderExtensions;
 
 // RTC4585 RTP/AVPF
 extern const char kMediaProtocolAvpf[];
@@ -82,8 +82,8 @@ struct MediaContentDescription {
 public:
 	MediaContentDescription() = default;
 	virtual ~MediaContentDescription() = default;
-	virtual libmedia::MediaType type() const = 0;
-	virtual libmedia::MediaType type() = 0;
+	virtual libmedia_transfer_protocol::MediaType type() const = 0;
+	virtual libmedia_transfer_protocol::MediaType type() = 0;
 	virtual AudioContentDescription* as_audio() { return nullptr; }
 	virtual const AudioContentDescription* as_audio() const { return nullptr; }
 
@@ -104,20 +104,20 @@ public:
   bool rtcp_reduced_size_ = false;
   bool remote_estimate_ = false;
   int bandwidth_ = kAutoBandwidth;
-  std::string bandwidth_type_ = libmedia::kApplicationSpecificBandwidth;
+  std::string bandwidth_type_ = libmedia_transfer_protocol::kApplicationSpecificBandwidth;
   std::string protocol_;
   std::vector<cricket::CryptoParams> cryptos_;
-  std::vector<libmedia::RtpExtension> rtp_header_extensions_;
+  std::vector<libmedia_transfer_protocol::RtpExtension> rtp_header_extensions_;
   bool rtp_header_extensions_set_ = false;
-  libmedia::StreamParamsVec send_streams_;
+  libmedia_transfer_protocol::StreamParamsVec send_streams_;
   bool conference_mode_ = false;
-  libmedia::RtpTransceiverDirection direction_ =
-	  libmedia::RtpTransceiverDirection::kSendRecv;
+  libmedia_transfer_protocol::RtpTransceiverDirection direction_ =
+	  libmedia_transfer_protocol::RtpTransceiverDirection::kSendRecv;
   rtc::SocketAddress connection_address_;
   ExtmapAllowMixed extmap_allow_mixed_enum_ = kMedia;
 
   SimulcastDescription simulcast_;
-  std::vector<libmedia::RidDescription> receive_rids_;
+  std::vector<libmedia_transfer_protocol::RidDescription> receive_rids_;
 //  MediaType media_type_ = MEDIA_TYPE_AUDIO;
 };
 
@@ -131,11 +131,11 @@ struct MediaContentDescriptionImpl : public MediaContentDescription {
 	  std::stringstream& ss);
 };
 
-struct AudioContentDescription : public MediaContentDescriptionImpl<libmedia::AudioCodec> {
+struct AudioContentDescription : public MediaContentDescriptionImpl<libmedia_transfer_protocol::AudioCodec> {
    
 	 
-	virtual libmedia::MediaType type() const { return libmedia::MEDIA_TYPE_AUDIO; };
-	virtual libmedia::MediaType type()   { return libmedia::MEDIA_TYPE_AUDIO; };
+	virtual libmedia_transfer_protocol::MediaType type() const { return libmedia_transfer_protocol::MEDIA_TYPE_AUDIO; };
+	virtual libmedia_transfer_protocol::MediaType type()   { return libmedia_transfer_protocol::MEDIA_TYPE_AUDIO; };
 	virtual AudioContentDescription* as_audio() { return this; }
 	virtual const AudioContentDescription* as_audio() const { return this; }
 
@@ -145,10 +145,10 @@ struct AudioContentDescription : public MediaContentDescriptionImpl<libmedia::Au
 	
 };
 
-struct VideoContentDescription : public MediaContentDescriptionImpl<libmedia::VideoCodec> {
+struct VideoContentDescription : public MediaContentDescriptionImpl<libmedia_transfer_protocol::VideoCodec> {
 	 
-	virtual libmedia::MediaType type() const { return libmedia::MEDIA_TYPE_VIDEO; };
-	virtual libmedia::MediaType type()   { return libmedia::MEDIA_TYPE_VIDEO; };
+	virtual libmedia_transfer_protocol::MediaType type() const { return libmedia_transfer_protocol::MEDIA_TYPE_VIDEO; };
+	virtual libmedia_transfer_protocol::MediaType type()   { return libmedia_transfer_protocol::MEDIA_TYPE_VIDEO; };
 	// Try to cast this media description to a VideoContentDescription. Returns
 	// nullptr if the cast fails.
 	virtual VideoContentDescription* as_video() { return this; }
@@ -265,11 +265,11 @@ public:
 
 	bool HasGroup(const std::string & mid);
 	 const  ContentGroup* GetGroupByName(const std::string& name) const;
-	TransportInfo *GetTransportInfoByName(const std::string & mid);
+	libice::TransportInfo *GetTransportInfoByName(const std::string & mid);
 	std::string ToString();
 public:
 	std::vector<ContentInfo> contents_;
-  std::vector<TransportInfo> transport_infos_;
+  std::vector<libice::TransportInfo> transport_infos_;
   std::vector<ContentGroup> content_groups_;
   bool msid_supported_ = false;
   // Default to what Plan B would do.

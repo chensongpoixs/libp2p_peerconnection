@@ -19,15 +19,16 @@
 
 
 
-#include "p2p_peerconnection/ctransport_controller.h"
+#include "libp2p_peerconnection/ctransport_controller.h"
 #include "rtc_base/third_party/sigslot/sigslot.h"
-#include "ice/basic_async_resolver_factory.h"
-#include "ice/ice_transport_factory.h"
-#include "ice/basic_port_allocator.h"
-#include "ice/default_ice_transport_factory.h"
-#include "p2p_peerconnection/connection_context.h"
-#include "ice/ice_credentials_iterator.h"
-namespace libice
+#include "libice/basic_async_resolver_factory.h"
+#include "libice/ice_transport_factory.h"
+#include "libice/basic_port_allocator.h"
+#include "libice/default_ice_transport_factory.h"
+#include "libp2p_peerconnection/connection_context.h"
+#include "libice/ice_credentials_iterator.h"
+#include "rtc_base/task_utils/to_queued_task.h"
+namespace libp2p_peerconnection
 {
 	transport_controller::transport_controller(  rtc::Thread*   t,   rtc::Thread* s
 		, rtc::BasicNetworkManager* default_network_manager,
@@ -51,7 +52,8 @@ namespace libice
 		}
 		else
 		{
-			network_thread_->PostTask(webrtc::ToQueuedTask(signaling_thread_safety_.flag(), [this, default_network_manager, default_socket_factory]() {
+			network_thread_->PostTask(webrtc::ToQueuedTask(signaling_thread_safety_.flag(), 
+				[this, default_network_manager, default_socket_factory]() {
 				RTC_DCHECK_RUN_ON(network_thread_);
 				port_allocator_ = std::make_shared<libice::BasicPortAllocator>(
 					default_network_manager, default_socket_factory,
@@ -111,7 +113,7 @@ namespace libice
 				ices_.insert(std::make_pair(mid, ice));
 				dtls_transports_.insert(std::make_pair(mid, rtp_dtls_transport));
 				// 设置ICE param
-				TransportInfo* td = desc->GetTransportInfoByName(mid);
+				libice::TransportInfo* td = desc->GetTransportInfoByName(mid);
 				if (td) 
 				{
 					libice::IceParameters  remote_ice_parameter;
@@ -169,7 +171,7 @@ namespace libice
 			if (mid != desc->contents_[0].name/*desc->HasGroup(mid) && mid != desc->content_groups_[0].semantics_*/) {
 				continue;
 			}
-			TransportInfo* td = desc->GetTransportInfoByName(mid);
+			libice::TransportInfo* td = desc->GetTransportInfoByName(mid);
 			//auto td = desc->GetTransportInfo(mid);
 			if (td) {
 			/*	ice_agent_->SetIceParams(mid, 1,
@@ -247,7 +249,7 @@ namespace libice
 		int component = rtcp ? libice::ICE_CANDIDATE_COMPONENT_RTCP
 			: libice::ICE_CANDIDATE_COMPONENT_RTP;
 
-		IceTransportInit init;
+		libice::IceTransportInit init;
 		init.set_port_allocator(port_allocator_.get());
 		init.set_async_dns_resolver_factory(async_dns_resolver_factory_.get());
 		//init.set_event_log(config_.event_log);
@@ -256,7 +258,7 @@ namespace libice
 		//return rtc::scoped_refptr<libice::IceTransportInterface>();
 	}
 	std::shared_ptr<libice::DtlsTransportInternal> transport_controller::CreateDtlsTransport(
-		 libice::ContentInfo * content_info, libice::IceTransportInternal * ice)
+		 ContentInfo * content_info, libice::IceTransportInternal * ice)
 	{
 	//	RTC_DCHECK_RUN_ON(context_->signaling_thread());
 

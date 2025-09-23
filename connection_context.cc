@@ -18,19 +18,19 @@
  ******************************************************************************/
 
 
-#include "p2p_peerconnection/connection_context.h"
+#include "libp2p_peerconnection/connection_context.h"
 
 #include <string>
 #include <type_traits>
 #include <utility>
 
 #include "api/transport/field_trial_based_config.h"
-#include "media/sctp/sctp_transport_factory.h"
+#include "libmedia_transfer_protocol/sctp/sctp_transport_factory.h"
 #include "rtc_base/helpers.h"
 #include "rtc_base/task_utils/to_queued_task.h"
 #include "rtc_base/time_utils.h"
 
-namespace libice {
+namespace libp2p_peerconnection {
 
 namespace {
 

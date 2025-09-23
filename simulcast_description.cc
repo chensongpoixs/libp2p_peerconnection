@@ -17,11 +17,11 @@
 
  ******************************************************************************/
 
-#include "p2p_peerconnection/simulcast_description.h"
+#include "libp2p_peerconnection/simulcast_description.h"
 
 #include "rtc_base/checks.h"
 
-namespace libice {
+namespace libp2p_peerconnection {
 
 SimulcastLayer::SimulcastLayer(const std::string& rid, bool is_paused)
     : rid{rid}, is_paused{is_paused} {

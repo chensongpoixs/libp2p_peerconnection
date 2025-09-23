@@ -16,7 +16,17 @@ MESSAGE(STATUS  "####################################")
 #)
 
  
-
+  include_directories(
+	#${XRTC_DIR}
+	#${XRTC_THIRD_PARTY_DIR}/include
+	#${XRTC_DIR}/../xrtc-third_party/NIM_Duilib_Framework
+	../
+	../libwebrtc
+	../deps/libyuv/include
+	../deps/abseil-cpp/
+	../deps/curl-7.81.0/include
+	../deps/jsoncpp/source/include
+)
 
 #
 

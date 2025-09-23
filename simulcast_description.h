@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-namespace libice {
+namespace libp2p_peerconnection {
 
 // Describes a Simulcast Layer.
 // Each simulcast layer has a rid as the identifier and a paused flag.

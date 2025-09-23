@@ -22,15 +22,15 @@
 
 
 
-#include "p2p_peerconnection/csession_description.h"
+#include "libp2p_peerconnection/csession_description.h"
 #include <utility>
 
 #include "absl/algorithm/container.h"
 #include "absl/memory/memory.h"
 #include "rtc_base/checks.h"
 #include "csession_description.h"
-#include "libmedia/ccodec.h"
-namespace libice {
+#include "libmedia_transfer_protocol/ccodec.h"
+namespace libp2p_peerconnection {
  
 	// RTP Profile names
 // http://www.iana.org/assignments/rtp-parameters/rtp-parameters.xml
@@ -57,12 +57,12 @@ namespace libice {
 		return acc.Release();
 	}
 
-static void AddRtcpFbLine(const libmedia::Codec& codec,
+static void AddRtcpFbLine(const libmedia_transfer_protocol::Codec& codec,
 	std::stringstream& ss)
 {
 	//for (const cricket::Codec  &c  : codecs)
 	{
-		std::vector<libmedia::FeedbackParam> params = codec.feedback_params;
+		std::vector<libmedia_transfer_protocol::FeedbackParam> params = codec.feedback_params;
 		for (auto& param : params)
 		{ 
 			ss << "a=rtcp-fb:" << codec.id << " " << param.id_;
@@ -75,7 +75,7 @@ static void AddRtcpFbLine(const libmedia::Codec& codec,
 	}
 }
 
-static void AddFmtpLine(const libmedia::Codec& codec,
+static void AddFmtpLine(const libmedia_transfer_protocol::Codec& codec,
 	std::stringstream& ss)
 {
 
@@ -103,10 +103,10 @@ inline void MediaContentDescriptionImpl<C>::BuildRtpMap(
 	MediaContentDescriptionImpl<C> * media_content,
 	std::stringstream & ss)
 {
-	for (  libmedia::Codec& codec : media_content->codecs_) {
+	for (  libmedia_transfer_protocol::Codec& codec : media_content->codecs_) {
 		ss << "a=rtpmap:" << codec.id << " " << codec.name << "/"
 			<< codec.clockrate;
-		 if (media_content->type() == libmedia::MEDIA_TYPE_AUDIO)
+		 if (media_content->type() == libmedia_transfer_protocol::MEDIA_TYPE_AUDIO)
 		{
 			//auto audio_codec = codec->AsAudio();
 			  
@@ -123,7 +123,7 @@ template<class C>
 inline void MediaContentDescriptionImpl<C>::BuildSsrc(MediaContentDescriptionImpl<C> * media_content, std::stringstream & ss)
 {
 
-	for (const libmedia::StreamParams& stream : media_content->send_streams_) {
+	for (const libmedia_transfer_protocol::StreamParams& stream : media_content->send_streams_) {
 		// 生成ssrc group
 		for (auto group : stream.ssrc_groups) {
 			if (group.ssrcs.empty()) {
@@ -178,7 +178,7 @@ bool SessionDescription::HasGroup(const std::string & mid)
 	return false;
 }
 
-TransportInfo *SessionDescription::GetTransportInfoByName(const std::string & mid)
+libice::TransportInfo *SessionDescription::GetTransportInfoByName(const std::string & mid)
 {
 	for (size_t i = 0; i < transport_infos_.size(); ++i)
 	{
@@ -247,7 +247,7 @@ std::string SessionDescription::ToString()
 		// 生成m行
 		// RFC 4566
 		// m=<media> <port> <proto> <fmt>
-		//MediaContentDescriptionImpl<libmedia::Codec> media =
+		//MediaContentDescriptionImpl<libmedia_transfer_protocol::Codec> media =
 		//build_sdp<>(contents_[i].description_.get(), ss);
 		//std::string fmt;
 		/*for (auto codec : content.media_description()()) {
@@ -255,8 +255,8 @@ std::string SessionDescription::ToString()
 			fmt.append(std::to_string(codec->id));
 		}*/
 		std::string fmt;
-		//MediaContentDescriptionImpl<libmedia::Codec>   media_desc;
-		if (contents_[i].description_->type() == libmedia::MEDIA_TYPE_AUDIO)
+		//MediaContentDescriptionImpl<libmedia_transfer_protocol::Codec>   media_desc;
+		if (contents_[i].description_->type() == libmedia_transfer_protocol::MEDIA_TYPE_AUDIO)
 		{
 			AudioContentDescription  *audio =  dynamic_cast<AudioContentDescription *>(contents_[i].description_->as_audio());
 			for (size_t w = 0; w < audio->codecs_.size(); ++w)
@@ -266,7 +266,7 @@ std::string SessionDescription::ToString()
 			}
 		//	media_desc = audio;
 		}
-		else if (contents_[i].description_->type() == libmedia::MEDIA_TYPE_VIDEO)
+		else if (contents_[i].description_->type() == libmedia_transfer_protocol::MEDIA_TYPE_VIDEO)
 		{
 			VideoContentDescription  *video = dynamic_cast<VideoContentDescription *>(contents_[i].description_->as_video());
 			for (size_t w = 0; w < video->codecs_.size(); ++w)
@@ -282,7 +282,7 @@ std::string SessionDescription::ToString()
 		ss << "c=IN IP4 0.0.0.0\r\n";
 		ss << "a=rtcp:9 IN IP4 0.0.0.0\r\n";
 
-		TransportInfo* td = GetTransportInfoByName(contents_[i].name);
+		libice::TransportInfo* td = GetTransportInfoByName(contents_[i].name);
 		if (td) {
 			ss << "a=ice-ufrag:" << td->description.ice_ufrag << "\r\n";
 			ss << "a=ice-pwd:" << td->description.ice_pwd << "\r\n";
@@ -303,13 +303,13 @@ std::string SessionDescription::ToString()
 		//if (content->rtcp_mux()) {
 		//	ss << "a=rtcp-mux" << "\r\n";
 		//}
-		if (contents_[i].description_->type() == libmedia::MEDIA_TYPE_AUDIO)
+		if (contents_[i].description_->type() == libmedia_transfer_protocol::MEDIA_TYPE_AUDIO)
 		{
 			AudioContentDescription  *audio = dynamic_cast<AudioContentDescription *>(contents_[i].description_->as_audio());
 			audio->BuildRtpMap(audio, ss);
 			audio->BuildSsrc(audio, ss);
 		}
-		else if (contents_[i].description_->type() == libmedia::MEDIA_TYPE_VIDEO)
+		else if (contents_[i].description_->type() == libmedia_transfer_protocol::MEDIA_TYPE_VIDEO)
 		{
 			VideoContentDescription  *video = dynamic_cast<VideoContentDescription *>(contents_[i].description_->as_video());
 			video->BuildRtpMap(video, ss);

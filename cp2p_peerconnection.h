@@ -22,9 +22,9 @@
 #ifndef _C_P2P_PEER_CONNECTION_H_
 #define _C_P2P_PEER_CONNECTION_H_
 #include "rtc_base/third_party/sigslot/sigslot.h"
-#include "p2p_peerconnection/csession_description.h"
-#include "p2p_peerconnection/ctransport_controller.h"
-namespace libice
+#include "libp2p_peerconnection/csession_description.h"
+#include "libp2p_peerconnection/ctransport_controller.h"
+namespace libp2p_peerconnection
 {
 	struct RTCOfferAnswerOptions {
 		bool send_audio = true;
@@ -47,12 +47,12 @@ namespace libice
 			const std::string& stream_id);
 	public:
 
-		rtc::scoped_refptr<libice::ConnectionContext> GetContext() { return context_; };
-		const rtc::scoped_refptr<libice::ConnectionContext> GetContext() const  { return context_; };
+		rtc::scoped_refptr<libp2p_peerconnection::ConnectionContext> GetContext() { return context_; };
+		const rtc::scoped_refptr<libp2p_peerconnection::ConnectionContext> GetContext() const  { return context_; };
 	private:
-		rtc::scoped_refptr<libice::ConnectionContext> context_;
-		std::unique_ptr<libice::SessionDescription> remote_desc_;
-		std::unique_ptr<libice::SessionDescription> local_desc_;
+		rtc::scoped_refptr<libp2p_peerconnection::ConnectionContext> context_;
+		std::unique_ptr<libp2p_peerconnection::SessionDescription> remote_desc_;
+		std::unique_ptr<libp2p_peerconnection::SessionDescription> local_desc_;
 
 		std::unique_ptr<transport_controller>  transport_controller_;
 

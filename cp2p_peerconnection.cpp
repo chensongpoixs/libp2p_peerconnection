@@ -16,13 +16,13 @@
 
 
  ******************************************************************************/
-#include "p2p_peerconnection/cp2p_peerconnection.h"
+#include "libp2p_peerconnection/cp2p_peerconnection.h"
 #include "api/jsep.h"
 #include "pc/webrtc_sdp.h"
-#include "ice/candidate.h"
-#include "ice/default_ice_transport_factory.h"
-#include "ice/ice_credentials_iterator.h"
-namespace libice
+#include "libice/candidate.h"
+#include "libice/default_ice_transport_factory.h"
+#include "libice/ice_credentials_iterator.h"
+namespace libp2p_peerconnection
 {
 
 	namespace {
@@ -70,7 +70,7 @@ namespace libice
 
 
 
-		static bool ParseTransportInfo(TransportDescription* td,
+		static bool ParseTransportInfo(libice::TransportDescription* td,
 			const std::string& line)
 		{
 			if (line.find("a=ice-ufrag") != std::string::npos) {
@@ -122,18 +122,18 @@ namespace libice
 
 
 
-		static libmedia::RtpTransceiverDirection GetDirection(bool send, bool recv) {
+		static libmedia_transfer_protocol::RtpTransceiverDirection GetDirection(bool send, bool recv) {
 			if (send && recv) {
-				return libmedia::RtpTransceiverDirection::kSendRecv;
+				return libmedia_transfer_protocol::RtpTransceiverDirection::kSendRecv;
 			}
 			else if (send && !recv) {
-				return libmedia::RtpTransceiverDirection::kSendOnly;
+				return libmedia_transfer_protocol::RtpTransceiverDirection::kSendOnly;
 			}
 			else if (!send && recv) {
-				return libmedia::RtpTransceiverDirection::kRecvOnly;
+				return libmedia_transfer_protocol::RtpTransceiverDirection::kRecvOnly;
 			}
 			else {
-				return libmedia::RtpTransceiverDirection::kInactive;
+				return libmedia_transfer_protocol::RtpTransceiverDirection::kInactive;
 			}
 		}
 	}
@@ -193,16 +193,16 @@ namespace libice
 			is_rn = true;
 		}
 
-		remote_desc_ = std::make_unique < libice:: SessionDescription > ();
+		remote_desc_ = std::make_unique < SessionDescription > ();
 		//remote_desc_->set_msid_supported(false);
 		//remote_desc_->set_extmap_allow_mixed(false);
 		std::string mid;
 		auto audio_content = std::make_unique<AudioContentDescription>();
 		auto video_content = std::make_unique<VideoContentDescription>();
 		//auto audio_td = std::make_unique<TransportDescription>();
-		TransportInfo  audio_td;
+		libice::TransportInfo  audio_td;
 		//auto video_td = std::make_unique<TransportDescription>();
-		TransportInfo  video_td;
+		libice::TransportInfo  video_td;
 		libice::Candidate audio_c;
 		libice::Candidate video_c;
 		ContentInfo  audio_content_info;
@@ -323,26 +323,26 @@ namespace libice
 		{
 			RTC_LOG(LS_WARNING) << " open  certificate failed !!!\n";
 		}
-		local_desc_ = std::make_unique < libice::SessionDescription >(/*webrtc::SdpType::kAnswer*/);
+		local_desc_ = std::make_unique <   SessionDescription >(/*webrtc::SdpType::kAnswer*/);
 		if (options.send_audio || options.recv_audio) {
 			auto audio_content = std::make_unique<AudioContentDescription>();
 			//AudioContentDescription audio_content;
 			audio_content->direction_ = (GetDirection(options.send_audio, options.recv_audio));
 			audio_content->rtcp_mux_ = (options.use_rtcp_mux);
-			TransportInfo  transport_info;
+			libice::TransportInfo  transport_info;
 			transport_info.content_name = "audio";
 			transport_info.description.ice_pwd = ice_param.pwd;
 			transport_info.description.ice_ufrag = ice_param.ufrag;
 			transport_info.description.identity_fingerprint = rtc::SSLFingerprint::CreateFromCertificate(*certificate);
 			local_desc_->transport_infos_.emplace_back(transport_info);
 			ContentInfo  content;// = new ContentInfo();
-			content.type = libice::MediaProtocolType::kRtp;
+			content.type = libp2p_peerconnection::MediaProtocolType::kRtp;
 			content.name = transport_info.content_name;
 			
 			
 			// 如果发送音频，需要创建stream
 			if (options.send_audio) {
-				libmedia::StreamParams audio_stream;
+				libmedia_transfer_protocol::StreamParams audio_stream;
 				audio_stream.id = rtc::CreateRandomString(16);
 				audio_stream.stream_ids_.emplace_back(stream_id); //{ std::to_string(stream_id) } ;
 				audio_stream.cname = cname;
@@ -358,7 +358,7 @@ namespace libice
 			auto video_content = std::make_unique<VideoContentDescription>();
 			video_content->direction_ = (GetDirection(options.send_video, options.recv_video));
 			video_content->rtcp_mux_ = (options.use_rtcp_mux);
-			TransportInfo  transport_info;
+			libice::TransportInfo  transport_info;
 			transport_info.content_name = "video";
 			transport_info.description.identity_fingerprint = rtc::SSLFingerprint::CreateFromCertificate(*certificate);
 			transport_info.description.ice_pwd = ice_param.pwd;
@@ -371,7 +371,7 @@ namespace libice
 			// 如果发送视频，需要创建stream
 			if (options.send_video) {
 				std::string id = rtc::CreateRandomString(16);
-				libmedia::StreamParams video_stream;
+				libmedia_transfer_protocol::StreamParams video_stream;
 				video_stream.id = id;
 				video_stream.stream_ids_ .push_back( stream_id );
 				video_stream.cname = cname;
@@ -381,7 +381,7 @@ namespace libice
 				video_stream.ssrcs.push_back(local_video_rtx_ssrc_);
 
 				// 分组
-				libmedia::SsrcGroup sg;// ("FID", { local_video_ssrc_ , local_video_rtx_ssrc_ });
+				libmedia_transfer_protocol::SsrcGroup sg;// ("FID", { local_video_ssrc_ , local_video_rtx_ssrc_ });
 				sg.semantics = "FID";
 				sg.ssrcs = { local_video_ssrc_ , local_video_rtx_ssrc_ };
 				//sg.semantics = ;
@@ -392,7 +392,7 @@ namespace libice
 				video_content->send_streams_.push_back(video_stream);
 
 				// 创建rtx stream
-				libmedia::StreamParams video_rtx_stream;
+				libmedia_transfer_protocol::StreamParams video_rtx_stream;
 				video_rtx_stream.id = id;
 				video_rtx_stream.stream_ids_ = { stream_id };
 				video_rtx_stream.cname = cname;
