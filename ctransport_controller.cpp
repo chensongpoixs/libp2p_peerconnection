@@ -28,6 +28,7 @@
 #include "libp2p_peerconnection/connection_context.h"
 #include "libice/ice_credentials_iterator.h"
 #include "rtc_base/task_utils/to_queued_task.h"
+#include "libp2p_peerconnection/jsep_transport.h"
 namespace libp2p_peerconnection
 {
 	transport_controller::transport_controller(  rtc::Thread*   t,   rtc::Thread* s
@@ -41,6 +42,14 @@ namespace libp2p_peerconnection
 		, crypto_options_()
 		, ices_()
 		, dtls_transports_()
+		, transports_(
+			[this](const std::string& mid, JsepTransport* transport) {
+		return OnTransportChanged(mid, transport);
+	},
+			[this]() {
+		RTC_DCHECK_RUN_ON(network_thread_);
+		UpdateAggregateStates_n();
+	})
 	{
 		 
 		if (network_thread_->IsCurrent())
@@ -92,26 +101,53 @@ namespace libp2p_peerconnection
 				// RTCP, 默认开启a=rtcp:mux
 				//ice_agent_->CreateDtlsTransport(mid, 1); // 1: RTP
 					
-						
-
-				auto  pi =  network_thread_->Invoke<std::pair<rtc::scoped_refptr<libice::IceTransportInterface>, std::shared_ptr<libice::DtlsTransportInternal> > >(RTC_FROM_HERE, [&] {
-					rtc::scoped_refptr<libice::IceTransportInterface> ice = CreateIceTransport(desc->contents_[i].name, /*rtcp=*/false);
+				std::unique_ptr<DtlsSrtpTransport> dtls_srtp_transport;
+				std::unique_ptr<RtpTransport> unencrypted_rtp_transport;
+				std::unique_ptr<libice::DtlsTransportInternal> rtcp_dtls_transport;
+				std::unique_ptr<libmedia_transfer_protocol::SctpTransportInternal> sctp_transport;
+				std::unique_ptr<SrtpTransport> sdes_transport;
+				rtc::scoped_refptr<libice::IceTransportInterface> rtcp_ice;
+				rtc::scoped_refptr<libice::IceTransportInterface> ice ;
+				std::unique_ptr<libice::DtlsTransportInternal> rtp_dtls_transport;
+				  network_thread_->Invoke< void>(RTC_FROM_HERE, [&] {
+					 ice = CreateIceTransport(desc->contents_[i].name, /*rtcp=*/false);
 						//  ice 
 						RTC_LOG(LS_INFO) << "create ice  name " << mid;
 						
 
-						std::shared_ptr<libice::DtlsTransportInternal> rtp_dtls_transport =
+						rtp_dtls_transport =
 							CreateDtlsTransport(&desc->contents_[i], ice->internal());
 						
-						return std::make_pair(ice, rtp_dtls_transport);
+						
+						
+						dtls_srtp_transport = CreateDtlsSrtpTransport(
+							desc->contents_[i].name, rtp_dtls_transport.get(), rtcp_dtls_transport.get());
+
+
+						std::unique_ptr<JsepTransport> jsep_transport =
+							std::make_unique<JsepTransport>(
+								desc->contents_[i].name, certificate_, std::move(ice), std::move(rtcp_ice),
+								std::move(unencrypted_rtp_transport), std::move(sdes_transport),
+								std::move(dtls_srtp_transport), std::move(rtp_dtls_transport),
+								std::move(rtcp_dtls_transport), std::move(sctp_transport), [&]() {
+							RTC_DCHECK_RUN_ON(network_thread_);
+							UpdateAggregateStates_n();
+						});
+
+						jsep_transport->rtp_transport()->SignalRtcpPacketReceived.connect(
+							this, &transport_controller::OnRtcpPacketReceived_n);
+
+						transports_.RegisterTransport(desc->contents_[i].name, std::move(jsep_transport));
+						UpdateAggregateStates_n();
+						 
 					});
 
 
 					
-				rtc::scoped_refptr<libice::IceTransportInterface> ice = pi.first;
-				std::shared_ptr<libice::DtlsTransportInternal> rtp_dtls_transport = pi.second;
+				
 				ices_.insert(std::make_pair(mid, ice));
-				dtls_transports_.insert(std::make_pair(mid, rtp_dtls_transport));
+				dtls_transports_.insert(std::make_pair(mid, rtp_dtls_transport.get()));
+				//dtls_transports_[mid] = rtp_dtls_transport;
 				// 设置ICE param
 				libice::TransportInfo* td = desc->GetTransportInfoByName(mid);
 				if (td) 
@@ -124,10 +160,10 @@ namespace libp2p_peerconnection
 				
 					 
 
-					 network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this, remote_ice_parameter, ice, rtp_dtls_transport, td]() {
+					 network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this, remote_ice_parameter, ice, rtp_dtls_transport_ = rtp_dtls_transport.get(), td]() {
 						 RTC_DCHECK_RUN_ON(network_thread_);
 						 ice->internal()->SetRemoteIceParameters(remote_ice_parameter);
-						rtp_dtls_transport->SetRemoteFingerprint(td->description.identity_fingerprint->algorithm,
+						 rtp_dtls_transport_->SetRemoteFingerprint(td->description.identity_fingerprint->algorithm,
 							td->description.identity_fingerprint->digest.cdata(),
 							td->description.identity_fingerprint->digest.size()
 						);
@@ -242,6 +278,23 @@ namespace libp2p_peerconnection
 	{
 		return 0;
 	}
+	bool transport_controller::OnTransportChanged(const std::string & mid, JsepTransport * transport)
+	{
+		RTC_LOG_F(LS_INFO) << "";
+		/*if (config_.transport_observer) {
+			if (jsep_transport) {
+				return config_.transport_observer->OnTransportChanged(
+					mid, jsep_transport->rtp_transport(),
+					jsep_transport->RtpDtlsTransport(),
+					jsep_transport->data_channel_transport());
+			}
+			else {
+				return config_.transport_observer->OnTransportChanged(mid, nullptr,
+					nullptr, nullptr);
+			}
+		}*/
+		return false;
+	}
 	rtc::scoped_refptr<libice::IceTransportInterface> transport_controller::CreateIceTransport(const std::string & transport_name, bool rtcp)
 	{
 
@@ -257,16 +310,16 @@ namespace libp2p_peerconnection
 			transport_name, component, std::move(init));
 		//return rtc::scoped_refptr<libice::IceTransportInterface>();
 	}
-	std::shared_ptr<libice::DtlsTransportInternal> transport_controller::CreateDtlsTransport(
+	std::unique_ptr<libice::DtlsTransportInternal> transport_controller::CreateDtlsTransport(
 		 ContentInfo * content_info, libice::IceTransportInternal * ice)
 	{
 	//	RTC_DCHECK_RUN_ON(context_->signaling_thread());
 
 
-		std::shared_ptr<libice::DtlsTransportInternal> dtls;
+		std::unique_ptr<libice::DtlsTransportInternal> dtls;
 
 		
-		dtls = std::make_shared<libice::DtlsTransport>(ice, crypto_options_,
+		dtls = std::make_unique<libice::DtlsTransport>(ice, crypto_options_,
 				nullptr,
 			rtc::SSL_PROTOCOL_DTLS_12/*config_.ssl_max_version*/);
 		
@@ -311,6 +364,28 @@ namespace libp2p_peerconnection
 
 		return dtls;
 		return std::unique_ptr<libice::DtlsTransportInternal>();
+	}
+	std::unique_ptr<DtlsSrtpTransport> transport_controller::CreateDtlsSrtpTransport(const std::string & transport_name, libice::DtlsTransportInternal * rtp_dtls_transport, libice::DtlsTransportInternal * rtcp_dtls_transport)
+	{
+
+		//RTC_DCHECK_RUN_ON(network_thread_);
+		auto dtls_srtp_transport = std::make_unique<DtlsSrtpTransport>(
+			rtcp_dtls_transport == nullptr);
+		//if (config_.enable_external_auth) {
+		//	dtls_srtp_transport->EnableExternalAuth();
+		//}
+
+		dtls_srtp_transport->SetDtlsTransports(rtp_dtls_transport,
+			rtcp_dtls_transport);
+		dtls_srtp_transport->SetActiveResetSrtpParams(active_reset_srtp_params_);
+		// Capturing this in the callback because JsepTransportController will always
+		// outlive the DtlsSrtpTransport.
+		dtls_srtp_transport->SetOnDtlsStateChange([this]() {
+			RTC_DCHECK_RUN_ON(this->network_thread_);
+			this->UpdateAggregateStates_n();
+		});
+		return dtls_srtp_transport;
+		return std::unique_ptr<DtlsSrtpTransport>();
 	}
 	void transport_controller::on_ice_stae()
 	{
@@ -635,6 +710,11 @@ namespace libp2p_peerconnection
 	}
 
 	void transport_controller::OnDtlsHandshakeError(rtc::SSLHandshakeError error)
+	{
+		RTC_LOG_F(LS_INFO) << "";
+	}
+
+	void transport_controller::OnRtcpPacketReceived_n(rtc::CopyOnWriteBuffer * packet, int64_t packet_time_us)
 	{
 		RTC_LOG_F(LS_INFO) << "";
 	}

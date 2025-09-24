@@ -320,5 +320,43 @@ std::string SessionDescription::ToString()
 
 	return ss.str();
 }
- 
+
+ContentGroup::ContentGroup(const ContentGroup&) = default;
+ContentGroup::ContentGroup(ContentGroup&&) = default;
+ContentGroup& ContentGroup::operator=(const ContentGroup&) = default;
+ContentGroup& ContentGroup::operator=(ContentGroup&&) = default;
+ContentGroup::~ContentGroup() = default;
+
+const std::string* ContentGroup::FirstContentName() const {
+	return (!content_names_.empty()) ? &(*content_names_.begin()) : NULL;
+}
+
+bool ContentGroup::HasContentName(const std::string& content_name) const {
+	return absl::c_linear_search(content_names_, content_name);
+}
+
+void ContentGroup::AddContentName(const std::string& content_name) {
+	if (!HasContentName(content_name)) {
+		content_names_.push_back(content_name);
+	}
+}
+
+bool ContentGroup::RemoveContentName(const std::string& content_name) {
+	std::vector<std::string>::iterator iter = absl::c_find(content_names_, content_name);
+	if (iter == content_names_.end()) {
+		return false;
+	}
+	content_names_.erase(iter);
+	return true;
+}
+
+std::vector<const ContentGroup*> SessionDescription::GetGroupsByName(const std::string& name) const {
+	std::vector<const ContentGroup*> content_groups;
+	for (const ContentGroup& content_group : content_groups_) {
+		if (content_group.semantics() == name) {
+			content_groups.push_back(&content_group);
+		}
+	}
+	return content_groups;
+}
 }  // namespace cricket

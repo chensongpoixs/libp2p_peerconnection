@@ -77,7 +77,7 @@ class UnsupportedContentDescription;
 
 // Describes a session description media section. There are subclasses for each
 // media type (audio, video, data) that will have additional information.
-struct MediaContentDescription {
+class MediaContentDescription {
 
 public:
 	MediaContentDescription() = default;
@@ -86,7 +86,7 @@ public:
 	virtual libmedia_transfer_protocol::MediaType type() = 0;
 	virtual AudioContentDescription* as_audio() { return nullptr; }
 	virtual const AudioContentDescription* as_audio() const { return nullptr; }
-
+	
 	// Try to cast this media description to a VideoContentDescription. Returns
 	// nullptr if the cast fails.
 	virtual VideoContentDescription* as_video() { return nullptr; }
@@ -226,10 +226,20 @@ public:
 // MediaDescription.
 struct ContentGroup {
 	ContentGroup() = default;
-	~ContentGroup() = default;
+	~ContentGroup();
+	ContentGroup(const ContentGroup&);
+	ContentGroup(ContentGroup&&);
+	ContentGroup& operator=(const ContentGroup&);
+	ContentGroup& operator=(ContentGroup&&);
   // for debugging
   std::string ToString() const;
-  
+  const std::string& semantics() const { return semantics_; }
+  const std::vector<std::string>& content_names() const { return content_names_; }
+
+  const std::string* FirstContentName() const;
+  bool HasContentName(const std::string& content_name) const;
+  void AddContentName(const std::string& content_name);
+  bool RemoveContentName(const std::string& content_name);
   std::string semantics_;
   std::vector<std::string> content_names_;
 };
@@ -267,6 +277,7 @@ public:
 	 const  ContentGroup* GetGroupByName(const std::string& name) const;
 	libice::TransportInfo *GetTransportInfoByName(const std::string & mid);
 	std::string ToString();
+	std::vector<const ContentGroup*> GetGroupsByName(const std::string& name) const;
 public:
 	std::vector<ContentInfo> contents_;
   std::vector<libice::TransportInfo> transport_infos_;

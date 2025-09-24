@@ -27,6 +27,8 @@
 #include "libice/dtls_transport.h"
 #include "libp2p_peerconnection/connection_context.h"
 #include "libice/dtls_transport_internal.h"
+#include "libp2p_peerconnection/dtls_srtp_transport.h"
+#include "libp2p_peerconnection/jsep_transport_collection.h"
 namespace libp2p_peerconnection
 {
 	class transport_controller : public sigslot::has_slots<>
@@ -52,15 +54,21 @@ namespace libp2p_peerconnection
 
 
 
+		bool OnTransportChanged(const std::string& mid,
+			 JsepTransport* transport);
+
 	public:
 		rtc::scoped_refptr<libice::IceTransportInterface> CreateIceTransport(
 			const std::string& transport_name, bool rtcp);
 
-		std::shared_ptr<libice::DtlsTransportInternal> CreateDtlsTransport(
+		std::unique_ptr<libice::DtlsTransportInternal> CreateDtlsTransport(
 			 ContentInfo* content_info,
 			libice::IceTransportInternal* ice);
 
-
+		std::unique_ptr< DtlsSrtpTransport> CreateDtlsSrtpTransport(
+			const std::string& transport_name,
+			libice::DtlsTransportInternal* rtp_dtls_transport,
+			libice::DtlsTransportInternal* rtcp_dtls_transport);
 	public:
 		// dtls  callback
 
@@ -99,6 +107,10 @@ namespace libp2p_peerconnection
 		void  UpdateAggregateStates_n();
 
 		void OnDtlsHandshakeError(rtc::SSLHandshakeError error);
+
+		void OnRtcpPacketReceived_n(
+			rtc::CopyOnWriteBuffer* packet,
+			int64_t packet_time_us);
 	private:
 
 		void on_ice_stae();
@@ -126,8 +138,11 @@ namespace libp2p_peerconnection
 
 		std::map<std::string, rtc::scoped_refptr<libice::IceTransportInterface>>  ices_;
 
-		std::map<std::string, std::shared_ptr< libice::DtlsTransportInternal>>   dtls_transports_;
+		std::map<std::string,libice::DtlsTransportInternal*>   dtls_transports_;
 		webrtc::ScopedTaskSafety signaling_thread_safety_;
+
+		JsepTransportCollection transports_ RTC_GUARDED_BY(network_thread_);
+		bool   active_reset_srtp_params_ = true;
 	};
 
 }
