@@ -168,6 +168,27 @@ namespace libp2p_peerconnection
 			});*/
 			
 		}
+
+
+		const uint64_t k_year_in_ms = 365 * 24 * 3600 * 1000L;
+		  ice_param_ = libice::IceCredentialsIterator::CreateRandomIceCredentials();
+		//std::string cname = rtc::CreateRandomString(16);
+		rtc::KeyParams key_params;
+		RTC_LOG(LS_INFO) << "dtls enabled, key type: " << key_params.type();
+		 certificate_ = rtc::RTCCertificateGenerator::GenerateCertificate(key_params,
+			k_year_in_ms);
+		//SSLFingerprint
+		if (certificate_)
+		{
+			rtc::RTCCertificatePEM pem = certificate_->ToPEM();
+			RTC_LOG(LS_INFO) << "rtc certificate: \n" << pem.certificate();
+			//certificate_ = certificate;
+			transport_controller_->set_certificeate( certificate_);
+		}
+		else
+		{
+			RTC_LOG(LS_WARNING) << " open  certificate failed !!!\n";
+		}
 		
 	}
 	p2p_peer_connection::~p2p_peer_connection()
@@ -305,24 +326,24 @@ namespace libp2p_peerconnection
 	}
 	std::string p2p_peer_connection::create_answer(const RTCOfferAnswerOptions & options, const std::string & stream_id)
 	{
-		const uint64_t k_year_in_ms = 365 * 24 * 3600 * 1000L;
-		libice::IceParameters ice_param = libice::IceCredentialsIterator::CreateRandomIceCredentials();
+		//const uint64_t k_year_in_ms = 365 * 24 * 3600 * 1000L;
+		//libice::IceParameters ice_param = libice::IceCredentialsIterator::CreateRandomIceCredentials();
 		std::string cname = rtc::CreateRandomString(16);
-		rtc::KeyParams key_params;
-		RTC_LOG(LS_INFO) << "dtls enabled, key type: " << key_params.type();
-		rtc::scoped_refptr<rtc::RTCCertificate> certificate = rtc::RTCCertificateGenerator::GenerateCertificate(key_params,
-			k_year_in_ms);
-		//SSLFingerprint
-		if (certificate)
-		{
-			rtc::RTCCertificatePEM pem = certificate->ToPEM();
-			RTC_LOG(LS_INFO) << "rtc certificate: \n" << pem.certificate();
-			//certificate_ = certificate;
-		}
-		else
-		{
-			RTC_LOG(LS_WARNING) << " open  certificate failed !!!\n";
-		}
+		//rtc::KeyParams key_params;
+		//RTC_LOG(LS_INFO) << "dtls enabled, key type: " << key_params.type();
+		//rtc::scoped_refptr<rtc::RTCCertificate> certificate = rtc::RTCCertificateGenerator::GenerateCertificate(key_params,
+		//	k_year_in_ms);
+		////SSLFingerprint
+		//if (certificate)
+		//{
+		//	rtc::RTCCertificatePEM pem = certificate->ToPEM();
+		//	RTC_LOG(LS_INFO) << "rtc certificate: \n" << pem.certificate();
+		//	//certificate_ = certificate;
+		//}
+		//else
+		//{
+		//	RTC_LOG(LS_WARNING) << " open  certificate failed !!!\n";
+		//}
 		local_desc_ = std::make_unique <   SessionDescription >(/*webrtc::SdpType::kAnswer*/);
 		if (options.send_audio || options.recv_audio) {
 			auto audio_content = std::make_unique<AudioContentDescription>();
@@ -331,9 +352,9 @@ namespace libp2p_peerconnection
 			audio_content->rtcp_mux_ = (options.use_rtcp_mux);
 			libice::TransportInfo  transport_info;
 			transport_info.content_name = "audio";
-			transport_info.description.ice_pwd = ice_param.pwd;
-			transport_info.description.ice_ufrag = ice_param.ufrag;
-			transport_info.description.identity_fingerprint = rtc::SSLFingerprint::CreateFromCertificate(*certificate);
+			transport_info.description.ice_pwd = ice_param_.pwd;
+			transport_info.description.ice_ufrag = ice_param_.ufrag;
+			transport_info.description.identity_fingerprint = rtc::SSLFingerprint::CreateFromCertificate(*certificate_);
 			local_desc_->transport_infos_.emplace_back(transport_info);
 			ContentInfo  content;// = new ContentInfo();
 			content.type = libp2p_peerconnection::MediaProtocolType::kRtp;
@@ -360,9 +381,9 @@ namespace libp2p_peerconnection
 			video_content->rtcp_mux_ = (options.use_rtcp_mux);
 			libice::TransportInfo  transport_info;
 			transport_info.content_name = "video";
-			transport_info.description.identity_fingerprint = rtc::SSLFingerprint::CreateFromCertificate(*certificate);
-			transport_info.description.ice_pwd = ice_param.pwd;
-			transport_info.description.ice_ufrag = ice_param.ufrag;
+			transport_info.description.identity_fingerprint = rtc::SSLFingerprint::CreateFromCertificate(*certificate_);
+			transport_info.description.ice_pwd = ice_param_.pwd;
+			transport_info.description.ice_ufrag = ice_param_.ufrag;
 			local_desc_->transport_infos_.emplace_back(transport_info);
 
 			ContentInfo  content;// = new ContentInfo();// (libice::MediaProtocolType::kRtp);
@@ -421,8 +442,8 @@ namespace libp2p_peerconnection
 			}
 		}
 
-		transport_controller_->set_local_sdp(local_desc_.get(), certificate);
-
+		transport_controller_->set_local_sdp(local_desc_.get(), certificate_);
+		
 		return local_desc_->ToString();
 		return std::string();
 	}

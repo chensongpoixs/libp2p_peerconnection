@@ -109,17 +109,19 @@ namespace libp2p_peerconnection
 				rtc::scoped_refptr<libice::IceTransportInterface> rtcp_ice;
 				rtc::scoped_refptr<libice::IceTransportInterface> ice ;
 				std::unique_ptr<libice::DtlsTransportInternal> rtp_dtls_transport;
+				libice::DtlsTransportInternal*   rtp_dtls_transport_;
+				libice::IceTransportInternal*  ice_p;
 				  network_thread_->Invoke< void>(RTC_FROM_HERE, [&] {
 					 ice = CreateIceTransport(desc->contents_[i].name, /*rtcp=*/false);
 						//  ice 
 						RTC_LOG(LS_INFO) << "create ice  name " << mid;
 						
-
+						ice_p = ice->internal();
 						rtp_dtls_transport =
 							CreateDtlsTransport(&desc->contents_[i], ice->internal());
 						
-						
-						
+						rtp_dtls_transport_ = rtp_dtls_transport.get();
+						rtp_dtls_transport_->SetDtlsRole(rtc::SSL_CLIENT);
 						dtls_srtp_transport = CreateDtlsSrtpTransport(
 							desc->contents_[i].name, rtp_dtls_transport.get(), rtcp_dtls_transport.get());
 
@@ -145,8 +147,8 @@ namespace libp2p_peerconnection
 
 					
 				
-				ices_.insert(std::make_pair(mid, ice));
-				dtls_transports_.insert(std::make_pair(mid, rtp_dtls_transport.get()));
+				ices_.insert(std::make_pair(mid, ice_p));
+				dtls_transports_.insert(std::make_pair(mid, rtp_dtls_transport_));
 				//dtls_transports_[mid] = rtp_dtls_transport;
 				// 设置ICE param
 				libice::TransportInfo* td = desc->GetTransportInfoByName(mid);
@@ -160,9 +162,9 @@ namespace libp2p_peerconnection
 				
 					 
 
-					 network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this, remote_ice_parameter, ice, rtp_dtls_transport_ = rtp_dtls_transport.get(), td]() {
+					 network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this, remote_ice_parameter, ice_p, rtp_dtls_transport_ = rtp_dtls_transport_, td]() {
 						 RTC_DCHECK_RUN_ON(network_thread_);
-						 ice->internal()->SetRemoteIceParameters(remote_ice_parameter);
+						 ice_p->SetRemoteIceParameters(remote_ice_parameter);
 						 rtp_dtls_transport_->SetRemoteFingerprint(td->description.identity_fingerprint->algorithm,
 							td->description.identity_fingerprint->digest.cdata(),
 							td->description.identity_fingerprint->digest.size()
@@ -221,7 +223,7 @@ namespace libp2p_peerconnection
 
 				network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [mid, local_ice_parameter, this, certificate]() {
 					RTC_DCHECK_RUN_ON(network_thread_);
-					ices_[mid]->internal()->SetIceParameters(local_ice_parameter);
+					ices_[mid]->SetIceParameters(local_ice_parameter);
 				//	auto ssl_fingerprint = rtc::SSLFingerprint::CreateFromRfc4572(alg, fingerprint);
 					dtls_transports_[mid]->SetLocalCertificate(certificate);
 				}));
@@ -235,19 +237,30 @@ namespace libp2p_peerconnection
 			if (network_thread_->IsCurrent())
 			{
 				//	context_->network_thread()->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this]() {
-				ices_["audio"]->internal()->MaybeStartGathering();
+				ices_["audio"]->MaybeStartGathering();
+
+				
+					/*webrtc::RTCError error =
+						transports_->NegotiateDtlsRole(webrtc::SdpType,
+						local_description_->transport_desc.connection_role,
+						remote_description_->transport_desc.connection_role,
+						&negotiated_dtls_role);*/
+				//设置客户端或服务端状态 需要判断双方 连接状态
+				//dtls_transports_["audio"]->SetDtlsRole(rtc::SSL_CLIENT);
+
 				//}));
 			}
 			else
 			{
 				network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this]() {
 					RTC_DCHECK_RUN_ON(network_thread_);
-					ices_["audio"]->internal()->MaybeStartGathering();
+					ices_["audio"]->MaybeStartGathering();
+					//dtls_transports_["audio"]->SetDtlsRole(rtc::SSL_CLIENT);
 				}));
 			}
 		 
 		
-		
+			
 		
 		return 0;
 	}
@@ -256,14 +269,14 @@ namespace libp2p_peerconnection
 		if (network_thread_->IsCurrent())
 		{
 			//	context_->network_thread()->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this]() {
-			ices_["audio"]->internal()->AddRemoteCandidate(candidate);
+			ices_["audio"]->AddRemoteCandidate(candidate);
 			//}));
 		}
 		else
 		{
 			network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this, candidate]() {
 				RTC_DCHECK_RUN_ON(network_thread_);
-				ices_["audio"]->internal()->AddRemoteCandidate(candidate);
+				ices_["audio"]->AddRemoteCandidate(candidate);
 			}));
 		}
 
@@ -277,6 +290,10 @@ namespace libp2p_peerconnection
 	int transport_controller::send_rtcp_packet(const std::string & transport_name, const char * data, size_t len)
 	{
 		return 0;
+	}
+	void transport_controller::set_certificeate(rtc::scoped_refptr<rtc::RTCCertificate> cert)
+	{
+		certificate_ = cert;
 	}
 	bool transport_controller::OnTransportChanged(const std::string & mid, JsepTransport * transport)
 	{
@@ -385,7 +402,7 @@ namespace libp2p_peerconnection
 			this->UpdateAggregateStates_n();
 		});
 		return dtls_srtp_transport;
-		return std::unique_ptr<DtlsSrtpTransport>();
+		//return std::unique_ptr<DtlsSrtpTransport>();
 	}
 	void transport_controller::on_ice_stae()
 	{

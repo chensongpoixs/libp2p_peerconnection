@@ -52,7 +52,7 @@ namespace libp2p_peerconnection
 		int  send_rtp_packet(const std::string & transport_name, const char * data, size_t len);
 		int  send_rtcp_packet(const std::string& transport_name, const char * data, size_t len);
 
-
+		void set_certificeate(rtc::scoped_refptr<rtc::RTCCertificate> cert);
 
 		bool OnTransportChanged(const std::string& mid,
 			 JsepTransport* transport);
@@ -136,7 +136,7 @@ namespace libp2p_peerconnection
 		rtc::scoped_refptr<rtc::RTCCertificate> certificate_;
 		libice::IceConfig ice_config_;
 
-		std::map<std::string, rtc::scoped_refptr<libice::IceTransportInterface>>  ices_;
+		std::map<std::string, libice::IceTransportInternal*>  ices_;
 
 		std::map<std::string,libice::DtlsTransportInternal*>   dtls_transports_;
 		webrtc::ScopedTaskSafety signaling_thread_safety_;

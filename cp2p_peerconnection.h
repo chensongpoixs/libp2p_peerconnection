@@ -63,6 +63,8 @@ namespace libp2p_peerconnection
 		uint32_t local_video_rtx_ssrc_ = 0;
 		uint8_t video_pt_ = 0;
 		uint8_t video_rtx_pt_ = 0;
+		rtc::scoped_refptr<rtc::RTCCertificate> certificate_;
+		libice::IceParameters ice_param_;
 	};
 
 }
