@@ -237,7 +237,12 @@ namespace libp2p_peerconnection
 			if (network_thread_->IsCurrent())
 			{
 				//	context_->network_thread()->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this]() {
-				ices_["audio"]->MaybeStartGathering();
+
+				for (auto pi : ices_)
+				{
+					pi.second->MaybeStartGathering();
+				}
+				
 
 				
 					/*webrtc::RTCError error =
@@ -254,7 +259,10 @@ namespace libp2p_peerconnection
 			{
 				network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this]() {
 					RTC_DCHECK_RUN_ON(network_thread_);
-					ices_["audio"]->MaybeStartGathering();
+					for (auto pi : ices_)
+					{
+						pi.second->MaybeStartGathering();
+					}
 					//dtls_transports_["audio"]->SetDtlsRole(rtc::SSL_CLIENT);
 				}));
 			}
@@ -269,14 +277,21 @@ namespace libp2p_peerconnection
 		if (network_thread_->IsCurrent())
 		{
 			//	context_->network_thread()->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this]() {
-			ices_["audio"]->AddRemoteCandidate(candidate);
+			//ices_["audio"]->AddRemoteCandidate(candidate);
+			for (auto pi : ices_)
+			{
+				pi.second->AddRemoteCandidate(candidate);
+			}
 			//}));
 		}
 		else
 		{
 			network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this, candidate]() {
 				RTC_DCHECK_RUN_ON(network_thread_);
-				ices_["audio"]->AddRemoteCandidate(candidate);
+				for (auto pi : ices_)
+				{
+					pi.second->AddRemoteCandidate(candidate);
+				}
 			}));
 		}
 
