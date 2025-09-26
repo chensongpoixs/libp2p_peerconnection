@@ -291,6 +291,7 @@ namespace libp2p_peerconnection
 					//remote_desc_->AddContent(mid, libice::MediaProtocolType::kRtp, std::move(video_content));
 					video_td.content_name = mid;
 					video_content_info.name = mid;
+					video_pt_ = std::atoi(items[3].c_str());
 				}
 			}
 			
@@ -318,6 +319,22 @@ namespace libp2p_peerconnection
 				}
 			}
 		}
+		/*
+		
+		if (video_content) {
+			auto video_codecs = video_content->codecs();
+			if (!video_codecs.empty()) {
+				video_pt_ = video_codecs[0]->id;
+			}
+		
+			if (video_codecs.size() > 1) {
+				video_rtx_pt_ = video_codecs[1]->id;
+			}
+		}
+		*/
+
+
+
 		audio_content_info.description_ = std::move(audio_content);
 		video_content_info.description_ = std::move(video_content);
 		remote_desc_->contents_.push_back(audio_content_info);
@@ -325,16 +342,7 @@ namespace libp2p_peerconnection
 		remote_desc_->transport_infos_.push_back(audio_td);
 		remote_desc_->transport_infos_.push_back(video_td);
 
-		//if (video_content) {
-		//	auto video_codecs = video_content->codecs();
-		//	if (!video_codecs.empty()) {
-		//		video_pt_ = video_codecs[0]->id;
-		//	}
-		//
-		//	if (video_codecs.size() > 1) {
-		//		video_rtx_pt_ = video_codecs[1]->id;
-		//	}
-		//}
+		
 
 		transport_controller_->set_remote_sdp(remote_desc_.get());
 		transport_controller_->set_remote_candidate(audio_c);
@@ -485,7 +493,9 @@ namespace libp2p_peerconnection
 		//encrypted_video_payload.SetSize(encoded_image->size());
 	//	encrypted_video_payload.SetData(encoded_image->size(), encoded_image->data());
 	//	rtp_video_hreader.video_type_header = absl::variant<webrtc::RTPVideoHeaderH264>;
-		 
+		webrtc::RTPVideoHeaderH264  h;
+		h.packetization_mode = webrtc::H264PacketizationMode::NonInterleaved;
+		rtp_video_hreader.video_type_header = h;
 		std::unique_ptr<libmedia_transfer_protocol::RtpPacketizer> packetizer = 
 			libmedia_transfer_protocol::RtpPacketizer::Create(
 				libmedia_codec::kVideoCodecH264, rtc::ArrayView<const uint8_t>(encoded_image->data(), encoded_image->size()),
@@ -520,7 +530,7 @@ namespace libp2p_peerconnection
 			//AddVideoCache(single_packet);
 			// 发送数据包
 			// TODO, transport_name此处写死，后面可以换成变量
-			transport_controller_->send_rtp_packet("video", (const char*)single_packet->data(),
+			transport_controller_->send_rtp_packet("audio", (const char*)single_packet->data(),
 				single_packet->size());
 		}
 
