@@ -35,6 +35,9 @@ file(GLOB p2p_peerconnection_source
 	*.h
 	*.cpp 
 	 *.cc 
+	  engine/*.h
+	 engine/*.cc
+	 engine/*.cpp 
 ) 
 
 

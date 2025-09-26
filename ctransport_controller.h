@@ -129,7 +129,7 @@ namespace libp2p_peerconnection
 		std::unique_ptr<webrtc::AsyncDnsResolverFactoryInterface> async_dns_resolver_factory_;
 		std::shared_ptr < libice::PortAllocator>    port_allocator_ = nullptr;
 		std::unique_ptr<libice::IceTransportFactory>  ice_transport_factory_ = nullptr;
-		webrtc::CryptoOptions  crypto_options_;
+		libmedia_transfer_protocol::CryptoOptions  crypto_options_;
 		// ice lite  full 模式 
 		libice::IceRole ice_role_ = libice::ICEROLE_CONTROLLING;
 		uint64_t ice_tiebreaker_ = rtc::CreateRandomId64();

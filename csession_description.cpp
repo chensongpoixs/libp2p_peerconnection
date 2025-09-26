@@ -62,8 +62,8 @@ static void AddRtcpFbLine(const libmedia_transfer_protocol::Codec& codec,
 {
 	//for (const cricket::Codec  &c  : codecs)
 	{
-		std::vector<libmedia_transfer_protocol::FeedbackParam> params = codec.feedback_params;
-		for (auto& param : params)
+		libmedia_transfer_protocol::FeedbackParams params = codec.feedback_params;
+		for (auto& param : params.params_)
 		{ 
 			ss << "a=rtcp-fb:" << codec.id << " " << param.id_;
 			if (!param.param_.empty()) {

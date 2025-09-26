@@ -155,8 +155,8 @@ class VideoSendStream {
     int number_of_quality_adapt_changes = 0;
     bool has_entered_low_resolution = false;
     std::map<uint32_t, StreamStats> substreams;
-    webrtc::VideoContentType content_type =
-        webrtc::VideoContentType::UNSPECIFIED;
+	libmedia_codec::VideoContentType content_type =
+		libmedia_codec::VideoContentType::UNSPECIFIED;
     uint32_t frames_sent = 0;
     uint32_t huge_frames_sent = 0;
   };
@@ -256,7 +256,7 @@ class VideoSendStream {
   GetAdaptationResources() = 0;
 
   virtual void SetSource(
-	  libmedia_codec::VideoSourceInterface<webrtc::VideoFrame>* source,
+	  libmedia_codec::VideoSourceInterface<libmedia_codec::VideoFrame>* source,
       const libmedia_transfer_protocol::DegradationPreference& degradation_preference) = 0;
 
   // Set which streams to send. Must have at least as many SSRCs as configured
