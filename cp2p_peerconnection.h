@@ -24,6 +24,9 @@
 #include "rtc_base/third_party/sigslot/sigslot.h"
 #include "libp2p_peerconnection/csession_description.h"
 #include "libp2p_peerconnection/ctransport_controller.h"
+//#include "libp2p_peerconnection/engine/webrtc_media_engine.h"
+#include "libmedia_codec/encoded_image.h"
+#include "libmedia_codec/x264_encoder.h"
 namespace libp2p_peerconnection
 {
 	struct RTCOfferAnswerOptions {
@@ -36,7 +39,7 @@ namespace libp2p_peerconnection
 		bool dtls_on = true;
 	};
 
-	class p2p_peer_connection// : public sigslot::has_slots<>
+	class p2p_peer_connection :  public  libmedia_codec::EncodeImageObser// : public sigslot::has_slots<>
 	{
 	public:
 		p2p_peer_connection();
@@ -49,6 +52,12 @@ namespace libp2p_peerconnection
 
 		rtc::scoped_refptr<libp2p_peerconnection::ConnectionContext> GetContext() { return context_; };
 		const rtc::scoped_refptr<libp2p_peerconnection::ConnectionContext> GetContext() const  { return context_; };
+
+
+		void CreateVideoChannel();
+
+	public:
+		virtual void   SendVideoEncode(std::shared_ptr<libmedia_codec::EncodedImage> encoded_image) override;
 	private:
 		rtc::scoped_refptr<libp2p_peerconnection::ConnectionContext> context_;
 		std::unique_ptr<libp2p_peerconnection::SessionDescription> remote_desc_;
@@ -65,6 +74,16 @@ namespace libp2p_peerconnection
 		uint8_t video_rtx_pt_ = 0;
 		rtc::scoped_refptr<rtc::RTCCertificate> certificate_;
 		libice::IceParameters ice_param_;
+
+		uint16_t video_seq_ = 1000;
+
+		std::vector<std::shared_ptr<libmedia_transfer_protocol::RtpPacketToSend>> video_cache_;
+
+
+		//std::unique_ptr< libmedia_codec::I420Buffer>                     buffer_frame_;
+		//std::unique_ptr<libp2p_peerconnection::MediaEngineInterface>                    media_engine_;
+	/*	std::unique_ptr<libmedia_codec::VideoBitrateAllocatorFactory>
+			video_bitrate_allocator_factory_;*/
 	};
 
 }

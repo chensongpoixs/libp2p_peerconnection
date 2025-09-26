@@ -29,6 +29,7 @@
 #include "libice/dtls_transport_internal.h"
 #include "libp2p_peerconnection/dtls_srtp_transport.h"
 #include "libp2p_peerconnection/jsep_transport_collection.h"
+#include "libmedia_codec/video_bitrate_allocator_factory.h"
 namespace libp2p_peerconnection
 {
 	class transport_controller : public sigslot::has_slots<>
@@ -56,6 +57,21 @@ namespace libp2p_peerconnection
 
 		bool OnTransportChanged(const std::string& mid,
 			 JsepTransport* transport);
+
+
+	public:
+
+		//void CreateVideoChannel(
+		//	//webrtc::Call* call,
+		//	const libmedia_transfer_protocol::MediaConfig& media_config,
+		//	RtpTransportInternal* rtp_transport,
+		//	rtc::Thread* signaling_thread,
+		//	const std::string& content_name,
+		//	bool srtp_required,
+		//	const libmedia_transfer_protocol::CryptoOptions& crypto_options,
+		//	rtc::UniqueRandomIdGenerator* ssrc_generator,
+		//	const libmedia_transfer_protocol::VideoOptions& options,
+		//	libmedia_codec::VideoBitrateAllocatorFactory* video_bitrate_allocator_factory);
 
 	public:
 		rtc::scoped_refptr<libice::IceTransportInterface> CreateIceTransport(

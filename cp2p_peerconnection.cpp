@@ -22,9 +22,14 @@
 #include "libice/candidate.h"
 #include "libice/default_ice_transport_factory.h"
 #include "libice/ice_credentials_iterator.h"
+#include "libmedia_transfer_protocol/rtp_rtcp/rtp_packet_to_send.h"
+#include "libmedia_transfer_protocol/rtp_rtcp/rtp_format.h"
+#include "modules/video_coding/codecs/h264/include/h264_globals.h"
+//#include "libmedia_codec/builtin_video_bitrate_allocator_factory.h"
+//#include "libp2p_peerconnection/engine/webrtc_media_engine.h"
 namespace libp2p_peerconnection
 {
-
+	const size_t RTC_PACKET_CACHE_SIZE = 2048;
 	namespace {
 		// a=attr_name:attr_value
 		static std::string GetAttribute(const std::string& line) {
@@ -142,6 +147,9 @@ namespace libp2p_peerconnection
 		: context_(ConnectionContext::Create())
 		, transport_controller_(nullptr)
 		, signaling_thread_safety_()
+		, video_cache_(RTC_PACKET_CACHE_SIZE)
+		//, media_engine_(nullptr)
+		//, video_bitrate_allocator_factory_ (libmedia_codec::CreateBuiltinVideoBitrateAllocatorFactory())
 	{
 
 		if (context_->network_thread()->IsCurrent())
@@ -189,6 +197,14 @@ namespace libp2p_peerconnection
 		{
 			RTC_LOG(LS_WARNING) << " open  certificate failed !!!\n";
 		}
+		//media_engine_ = libp2p_peerconnection::CreateMediaEngine::Create(media_dep);
+		//context_->worker_thread()->PostTask(RTC_FROM_HERE, [this]() {
+		//	RTC_DCHECK_RUN_ON(context_->network_thread());
+		//	libp2p_peerconnection::MediaEngineDependencies media_dep;
+		//	//using namespace libp2p_peerconnection;
+		//	media_engine_ = libp2p_peerconnection::CreateMediaEngine(media_dep);
+		//}
+		//);
 		
 	}
 	p2p_peer_connection::~p2p_peer_connection()
@@ -446,5 +462,76 @@ namespace libp2p_peerconnection
 		
 		return local_desc_->ToString();
 		return std::string();
+	}
+	void   p2p_peer_connection::SendVideoEncode(std::shared_ptr<libmedia_codec::EncodedImage> encoded_image)
+	{
+		RTC_LOG_F(LS_INFO) << "";
+
+
+		// 视频的频率90000, 1s中90000份 1ms => 90
+		uint32_t rtp_timestamp = encoded_image->Timestamp() * 90;
+
+	/*	if (video_send_stream_) {
+			video_send_stream_->OnSendingRtpFrame(rtp_timestamp,
+				frame->capture_time_ms,
+				frame->fmt.sub_fmt.video_fmt.idr);
+		}
+*/
+		//RTPVideoHeader::RtpPacketizer::Config config;
+#if 1
+		libmedia_transfer_protocol::RtpPacketizer::PayloadSizeLimits   lists;
+		libmedia_transfer_protocol::RTPVideoHeader   rtp_video_hreader;
+		//rtc::Buffer encrypted_video_payload;
+		//encrypted_video_payload.SetSize(encoded_image->size());
+	//	encrypted_video_payload.SetData(encoded_image->size(), encoded_image->data());
+	//	rtp_video_hreader.video_type_header = absl::variant<webrtc::RTPVideoHeaderH264>;
+		 
+		std::unique_ptr<libmedia_transfer_protocol::RtpPacketizer> packetizer = 
+			libmedia_transfer_protocol::RtpPacketizer::Create(
+				libmedia_codec::kVideoCodecH264, rtc::ArrayView<const uint8_t>(encoded_image->data(), encoded_image->size()),
+			lists, rtp_video_hreader);
+#else 
+
+		webrtc::RtpPacketizer::Config config;
+		auto packetizer = webrtc::RtpPacketizer::Create(webrtc::kVideoCodecH264,
+			rtc::ArrayView<const uint8_t>((uint8_t*)frame->data[0], frame->data_len[0]),
+			config);
+
+#endif 
+		while (true) {
+			auto  single_packet = std::make_shared<libmedia_transfer_protocol::RtpPacketToSend>();
+
+		 
+
+			single_packet->SetPayloadType(video_pt_);
+			single_packet->SetTimestamp(rtp_timestamp);
+			single_packet->SetSsrc(local_video_ssrc_);
+
+			if (!packetizer->NextPacket(single_packet.get())) {
+				break;
+			}
+
+			single_packet->SetSequenceNumber(video_seq_++);
+
+			//if (video_send_stream_) {
+			//	video_send_stream_->UpdateRtpStats(single_packet, false, false);
+			//}
+
+			//AddVideoCache(single_packet);
+			// 发送数据包
+			// TODO, transport_name此处写死，后面可以换成变量
+			transport_controller_->send_rtp_packet("video", (const char*)single_packet->data(),
+				single_packet->size());
+		}
+
+	}
+	void p2p_peer_connection::CreateVideoChannel()
+	{
+		libmedia_transfer_protocol::MediaConfig  media_config;
+		libmedia_transfer_protocol::VideoOptions   options;
+		libmedia_transfer_protocol::CryptoOptions   crypto_options;
+	/*	libmedia_transfer_protocol::VideoMediaChannel* media_channel = media_engine_->video().CreateMediaChannel(
+			  media_config, options, crypto_options,
+			video_bitrate_allocator_factory_.get());*/
 	}
 }

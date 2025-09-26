@@ -111,7 +111,7 @@ webrtc::RTCError CheckRtpParametersValues(
     if (rtp_parameters.encodings[i].num_temporal_layers) {
       if (*rtp_parameters.encodings[i].num_temporal_layers < 1 ||
           *rtp_parameters.encodings[i].num_temporal_layers >
-              webrtc::kMaxTemporalStreams) {
+              libmedia_codec::kMaxTemporalStreams) {
         LOG_AND_RETURN_ERROR(RTCErrorType::INVALID_RANGE,
                              "Attempted to set RtpParameters "
                              "num_temporal_layers to an invalid number.");

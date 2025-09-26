@@ -300,6 +300,14 @@ namespace libp2p_peerconnection
 	}
 	int transport_controller::send_rtp_packet(const std::string & transport_name, const char * data, size_t len)
 	{
+		network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this, data, len]() {
+			RTC_DCHECK_RUN_ON(network_thread_);
+			for (auto pi : dtls_transports_)
+			{
+				rtc::PacketOptions  opts;
+				pi.second->SendPacket(data, len, opts, 0);
+			}
+		}));
 		return 0;
 	}
 	int transport_controller::send_rtcp_packet(const std::string & transport_name, const char * data, size_t len)
@@ -327,6 +335,30 @@ namespace libp2p_peerconnection
 		}*/
 		return false;
 	}
+	//void transport_controller::CreateVideoChannel(const libmedia_transfer_protocol::MediaConfig & media_config, 
+	//	RtpTransportInternal * rtp_transport, rtc::Thread * signaling_thread, rtc::Thread * worker_thread,
+	//	const std::string & content_name, bool srtp_required, const libmedia_transfer_protocol::CryptoOptions & crypto_options, 
+	//	rtc::UniqueRandomIdGenerator * ssrc_generator, const libmedia_transfer_protocol::VideoOptions & options, 
+	//	libmedia_codec::VideoBitrateAllocatorFactory * video_bitrate_allocator_factory)
+	//{
+	//	if (!worker_thread->IsCurrent()) {
+	//		worker_thread->Invoke<void>(RTC_FROM_HERE, [&] {
+	//			  CreateVideoChannel(  media_config, rtp_transport,
+	//				signaling_thread, content_name, srtp_required,
+	//				crypto_options, ssrc_generator, options,
+	//				video_bitrate_allocator_factory);
+	//		});
+	//	}
+
+	//	RTC_DCHECK_RUN_ON(worker_thread);
+
+	//	libmedia_transfer_protocol::VideoMediaChannel* media_channel = media_engine_->video().CreateMediaChannel(
+	//		call, media_config, options, crypto_options,
+	//		video_bitrate_allocator_factory);
+	//	//if (!media_channel) {
+	//	//	return nullptr;
+	//	//}
+	//}
 	rtc::scoped_refptr<libice::IceTransportInterface> transport_controller::CreateIceTransport(const std::string & transport_name, bool rtcp)
 	{
 

@@ -48,6 +48,7 @@
 #include "libmedia_transfer_protocol/rtp_rtcp/report_block_data.h"
 #include "libmedia_transfer_protocol/rtp_rtcp/rtcp_statistics.h"
 #include "libmedia_transfer_protocol/rtp_rtcp/rtp_rtcp_defines.h"
+#include "libmedia_transfer_protocol/rtp_rtcp/rtp_rtcp_impl.h"
 namespace libmedia_transfer_protocol
 {
 	class   FrameEncryptorInterface;
@@ -56,9 +57,50 @@ namespace libmedia_transfer_protocol
 }
 namespace libp2p_peerconnection {
 
-	
-		
- 
+
+	struct Video_SendStreamConfig {
+		struct Rtp {
+			uint32_t ssrc = 0;
+			int payload_type = -1;
+			int clock_rate = 90000;
+
+			struct Rtx {
+				uint32_t ssrc = 0;
+				int payload_type = -1;
+			} rtx;
+
+		} rtp;
+
+		// 视频的rtcp包发送间隔
+		int rtcp_report_interval_ms = 1000;
+		//libmedia_transfer_protocol::RtpRtcpModuleObserver* rtp_rtcp_module_observer = nullptr;
+	};
+	class Video_SendStream {
+	public:
+		Video_SendStream(webrtc::Clock* clock, const Video_SendStreamConfig& config) :
+			config_(config)
+			//, rtp_rtcp_(CreateRtpRtcpModule(clock, config))
+		{
+		//	rtp_rtcp_->SetRTCPStatus(webrtc::RtcpMode::kCompound);
+			//rtp_rtcp_->SetSendingStatus(true);
+		}
+		~Video_SendStream() {}
+
+		void UpdateRtpStats(std::shared_ptr<libmedia_transfer_protocol::RtpPacketToSend> packet,
+			bool is_rtx, bool is_retransmit) {}
+		void OnSendingRtpFrame(uint32_t rtp_timestamp,
+			int64_t capture_time_ms,
+			bool forced_report) {}
+		void DeliverRtcp(const uint8_t* packet, size_t length) {}
+		std::unique_ptr<libmedia_transfer_protocol::RtpPacketToSend> BuildRtxPacket(
+			std::shared_ptr<libmedia_transfer_protocol::RtpPacketToSend> packet) {}
+
+	private:
+		Video_SendStreamConfig config_;
+		//std::unique_ptr<libmedia_transfer_protocol::ModuleRtpRtcpImpl> rtp_rtcp_;
+		uint16_t rtx_seq_ = 1000;
+	};
+
 
 class VideoSendStream {
  public:

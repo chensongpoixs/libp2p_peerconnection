@@ -37,7 +37,7 @@
 namespace libp2p_peerconnection {
 
 std::unique_ptr<MediaEngineInterface> CreateMediaEngine(
-    MediaEngineDependencies dependencies) {
+     MediaEngineDependencies dependencies) {
   // TODO(sprang): Make populating `dependencies.trials` mandatory and remove
   // these fallbacks.
   std::unique_ptr<webrtc::WebRtcKeyValueConfig> fallback_trials(
