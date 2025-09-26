@@ -301,28 +301,29 @@ namespace libp2p_peerconnection
 	int transport_controller::send_rtp_packet(const std::string & transport_name, const char * data, size_t len)
 	{
 	//	auto  * tr = &transports_;
-		network_thread_->Invoke<void>(RTC_FROM_HERE, [ & ]() {
+		rtc::CopyOnWriteBuffer buffer(data, len, 2048);// (len, len + 30);
+		network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this, buffer_ = std::move(buffer), transport_name_ = transport_name]()mutable {
 			RTC_DCHECK_RUN_ON(network_thread_);
 			
 			//rtc::PacketOptions  opts;
 			//ices_[transport_name]->SendPacket(data, len, opts, 0);
 			//return;
-			JsepTransport*  jsep_tran = transports_.GetTransportByName(transport_name);
+			JsepTransport*  jsep_tran = transports_.GetTransportByName(transport_name_);
 			if (jsep_tran)
 			{
 				//rtc::PacketOptions  opts;
-				rtc::CopyOnWriteBuffer buffer(data, len, 2048);// (len, len + 30);
+				
 				//buffer.SetData(data);
 				//buffer.SetSize(len + 30);
 				//buffer.SetData(std::string(data, len));
-				jsep_tran->rtp_transport()->SendRtpPacket(&buffer, rtc::PacketOptions(), 1);
+				jsep_tran->rtp_transport()->SendRtpPacket(&buffer_, rtc::PacketOptions(), 1);
 			}
 			/*for (auto pi : ices_)
 			{
 				rtc::PacketOptions  opts;
 				pi.second->SendPacket(data, len, opts, 0);
 			}*/
-		});
+		}));
 		return 0;
 	}
 	int transport_controller::send_rtcp_packet(const std::string & transport_name, const char * data, size_t len)
