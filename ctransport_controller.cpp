@@ -86,15 +86,16 @@ namespace libp2p_peerconnection
 	}
 	transport_controller::~transport_controller()
 	{
+		// 资源释放问题 TODO@chensong  2025-09-25
 		//signaling_thread_safety_.~ScopedTaskSafety();
 		  rtp_rtcp_impl_.reset();
-		  ice_transport_factory_.reset();
-		  network_thread_->Invoke<void>(RTC_FROM_HERE,[this]() {
-			  RTC_DCHECK_RUN_ON(network_thread_);
-			  port_allocator_.reset();
+		 // ice_transport_factory_.reset();
+		 // network_thread_->Invoke<void>(RTC_FROM_HERE,[this]() {
+		//	  RTC_DCHECK_RUN_ON(network_thread_);
+			//  port_allocator_.reset();
 			 
-		  });
-		  async_dns_resolver_factory_.reset();
+		 // });
+		 // async_dns_resolver_factory_.reset();
 		 
 	//	rtp_rtcp_impl_ = nullptr;
 	}
