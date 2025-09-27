@@ -211,7 +211,7 @@ namespace libp2p_peerconnection
 	{
 		context_->network_thread()->Invoke<void>(RTC_FROM_HERE, [this]() {
 			RTC_DCHECK_RUN_ON(context_->network_thread());
-			  transport_controller_.reset();
+			  transport_controller_.reset(nullptr);
 		});
 		context_->Release();
 		//context_->network_thread()->Stop();

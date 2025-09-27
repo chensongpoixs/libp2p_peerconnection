@@ -88,7 +88,7 @@ namespace libp2p_peerconnection
 	{
 		// 资源释放问题 TODO@chensong  2025-09-25
 		//signaling_thread_safety_.~ScopedTaskSafety();
-		  rtp_rtcp_impl_.reset();
+		  rtp_rtcp_impl_.reset(nullptr);
 		 // ice_transport_factory_.reset();
 		 // network_thread_->Invoke<void>(RTC_FROM_HERE,[this]() {
 		//	  RTC_DCHECK_RUN_ON(network_thread_);

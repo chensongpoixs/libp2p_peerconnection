@@ -157,8 +157,8 @@ ConnectionContext::~ConnectionContext() {
   // `default_socket_factory_` and `default_network_manager_`.
 	network_thread_->Invoke<void>(RTC_FROM_HERE, [this]() {
 		RTC_DCHECK_RUN_ON(network_thread_);
-		default_socket_factory_.reset();
-		default_network_manager_.reset();
+		default_socket_factory_.reset(nullptr);
+		default_network_manager_.reset(nullptr);
 
 	});
 
