@@ -150,21 +150,29 @@ ConnectionContext::ConnectionContext()
 
 ConnectionContext::~ConnectionContext() {
   //RTC_DCHECK_RUN_ON(signaling_thread_);
-  worker_thread_->Invoke<void>(RTC_FROM_HERE,
-                               [&]() { /*channel_manager_.reset(nullptr);*/ });
+  //worker_thread_->Invoke<void>(RTC_FROM_HERE,
+  //                             [&]() { /*channel_manager_.reset(nullptr);*/ });
 
   // Make sure `worker_thread()` and `signaling_thread()` outlive
   // `default_socket_factory_` and `default_network_manager_`.
-  default_socket_factory_ = nullptr;
-  default_network_manager_ = nullptr;
+	network_thread_->Invoke<void>(RTC_FROM_HERE, [this]() {
+		RTC_DCHECK_RUN_ON(network_thread_);
+		default_socket_factory_.reset();
+		default_network_manager_.reset();
+
+	});
 
   //if (wraps_current_thread_)
   //  rtc::ThreadManager::Instance()->UnwrapCurrentThread();
   RTC_LOG(LS_INFO) << "context  free ....";
- /* network_thread_->Stop();
+  network_thread_->Stop();
   worker_thread_->Stop();
-  signaling_thread_->Stop();*/
+  signaling_thread_->Stop();
   RTC_LOG(LS_INFO) << "context work thread exit ok !!!!";
+#if  0
+  default_socket_factory_ = nullptr;
+  default_network_manager_ = nullptr;
+#endif  
 }
 
 //cricket::ChannelManager* ConnectionContext::channel_manager() const {

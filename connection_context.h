@@ -101,7 +101,7 @@ class ConnectionContext
   std::unique_ptr<rtc::BasicNetworkManager> default_network_manager_ ; 
 
   std::unique_ptr<libice::BasicPacketSocketFactory> default_socket_factory_ ; 
-  webrtc::ScopedTaskSafety signaling_thread_safety_;
+ // webrtc::ScopedTaskSafety signaling_thread_safety_;
 };
 
 }  // namespace webrtc

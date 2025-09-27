@@ -30,6 +30,7 @@
 #include "libp2p_peerconnection/dtls_srtp_transport.h"
 #include "libp2p_peerconnection/jsep_transport_collection.h"
 #include "libmedia_codec/video_bitrate_allocator_factory.h"
+#include "libmedia_transfer_protocol/rtp_rtcp/rtp_rtcp_impl.h"
 namespace libp2p_peerconnection
 {
 	class transport_controller : public sigslot::has_slots<>
@@ -159,6 +160,9 @@ namespace libp2p_peerconnection
 
 		JsepTransportCollection transports_ RTC_GUARDED_BY(network_thread_);
 		bool   active_reset_srtp_params_ = true;
+
+
+		std::unique_ptr<libmedia_transfer_protocol::ModuleRtpRtcpImpl>   rtp_rtcp_impl_;
 	};
 
 }

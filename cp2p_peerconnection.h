@@ -65,7 +65,7 @@ namespace libp2p_peerconnection
 
 		std::unique_ptr<transport_controller>  transport_controller_;
 
-		webrtc::ScopedTaskSafety signaling_thread_safety_;
+	//	webrtc::ScopedTaskSafety signaling_thread_safety_;
 
 		uint32_t local_audio_ssrc_ = 0;
 		uint32_t local_video_ssrc_ = 0;

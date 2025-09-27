@@ -150,6 +150,7 @@ JsepTransport::JsepTransport(
 JsepTransport::~JsepTransport() {
   TRACE_EVENT0("webrtc", "JsepTransport::~JsepTransport");
   if (sctp_transport_) {
+	  sctp_transport_->UnregisterObserver();
     sctp_transport_->Clear();
   }
 
@@ -159,6 +160,7 @@ JsepTransport::~JsepTransport() {
   if (rtcp_dtls_transport_) {
     rtcp_dtls_transport_->Clear();
   }
+  
 
   // ICE will be the last transport to be deleted.
 }

@@ -146,7 +146,7 @@ namespace libp2p_peerconnection
 	p2p_peer_connection::p2p_peer_connection()
 		: context_(ConnectionContext::Create())
 		, transport_controller_(nullptr)
-		, signaling_thread_safety_()
+		//, signaling_thread_safety_()
 		, video_cache_(RTC_PACKET_CACHE_SIZE)
 		//, media_engine_(nullptr)
 		//, video_bitrate_allocator_factory_ (libmedia_codec::CreateBuiltinVideoBitrateAllocatorFactory())
@@ -209,7 +209,14 @@ namespace libp2p_peerconnection
 	}
 	p2p_peer_connection::~p2p_peer_connection()
 	{
+		context_->network_thread()->Invoke<void>(RTC_FROM_HERE, [this]() {
+			RTC_DCHECK_RUN_ON(context_->network_thread());
+			  transport_controller_.reset();
+		});
 		context_->Release();
+		//context_->network_thread()->Stop();
+		//context_->signaling_thread()->Stop();
+		//context_->worker_thread()->Stop();
 	}
 	int p2p_peer_connection::set_remote_sdp(const std::string & sdp)
 	{
@@ -473,7 +480,7 @@ namespace libp2p_peerconnection
 	}
 	void   p2p_peer_connection::SendVideoEncode(std::shared_ptr<libmedia_codec::EncodedImage> encoded_image)
 	{
-		RTC_LOG_F(LS_INFO) << "";
+	//	RTC_LOG_F(LS_INFO) << "";
 
 
 		// 视频的频率90000, 1s中90000份 1ms => 90
