@@ -77,6 +77,7 @@ namespace libp2p_peerconnection
 		libice::IceParameters ice_param_;
 
 		uint16_t video_seq_ = 1000;
+		uint16_t  transprot_seq_ = 1000;
 
 		std::vector<std::shared_ptr<libmedia_transfer_protocol::RtpPacketToSend>> video_cache_;
 

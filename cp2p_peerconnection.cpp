@@ -530,12 +530,14 @@ namespace libp2p_peerconnection
 			single_packet->SetPayloadType(video_pt_);
 			single_packet->SetTimestamp(rtp_timestamp);
 			single_packet->SetSsrc(local_video_ssrc_);
-
+			single_packet->ReserveExtension<libmedia_transfer_protocol::TransportSequenceNumber>();
+			
 			if (!packetizer->NextPacket(single_packet.get())) {
 				break;
 			}
 
 			single_packet->SetSequenceNumber(video_seq_++);
+			single_packet->SetExtension<libmedia_transfer_protocol::TransportSequenceNumber>(transprot_seq_++);
 
 			//if (video_send_stream_) {
 			//	video_send_stream_->UpdateRtpStats(single_packet, false, false);
