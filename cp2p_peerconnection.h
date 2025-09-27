@@ -27,6 +27,7 @@
 //#include "libp2p_peerconnection/engine/webrtc_media_engine.h"
 #include "libmedia_codec/encoded_image.h"
 #include "libmedia_codec/x264_encoder.h"
+#include "libmedia_transfer_protocol/rtp_rtcp/rtp_header_extension_map.h"
 namespace libp2p_peerconnection
 {
 	struct RTCOfferAnswerOptions {
@@ -84,6 +85,7 @@ namespace libp2p_peerconnection
 		//std::unique_ptr<libp2p_peerconnection::MediaEngineInterface>                    media_engine_;
 	/*	std::unique_ptr<libmedia_codec::VideoBitrateAllocatorFactory>
 			video_bitrate_allocator_factory_;*/
+		libmedia_transfer_protocol::	RtpHeaderExtensionMap            rtp_header_extension_map_;
 	};
 
 }

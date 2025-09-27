@@ -178,25 +178,7 @@ namespace libp2p_peerconnection
 		}
 
 
-		const uint64_t k_year_in_ms = 365 * 24 * 3600 * 1000L;
-		  ice_param_ = libice::IceCredentialsIterator::CreateRandomIceCredentials();
-		//std::string cname = rtc::CreateRandomString(16);
-		rtc::KeyParams key_params;
-		RTC_LOG(LS_INFO) << "dtls enabled, key type: " << key_params.type();
-		 certificate_ = rtc::RTCCertificateGenerator::GenerateCertificate(key_params,
-			k_year_in_ms);
-		//SSLFingerprint
-		if (certificate_)
-		{
-			rtc::RTCCertificatePEM pem = certificate_->ToPEM();
-			RTC_LOG(LS_INFO) << "rtc certificate: \n" << pem.certificate();
-			//certificate_ = certificate;
-			transport_controller_->set_certificeate( certificate_);
-		}
-		else
-		{
-			RTC_LOG(LS_WARNING) << " open  certificate failed !!!\n";
-		}
+		
 		//media_engine_ = libp2p_peerconnection::CreateMediaEngine::Create(media_dep);
 		//context_->worker_thread()->PostTask(RTC_FROM_HERE, [this]() {
 		//	RTC_DCHECK_RUN_ON(context_->network_thread());
@@ -205,6 +187,10 @@ namespace libp2p_peerconnection
 		//	media_engine_ = libp2p_peerconnection::CreateMediaEngine(media_dep);
 		//}
 		//);
+
+
+  // 注册 transport-cc  rtp header
+		rtp_header_extension_map_.Register<libmedia_transfer_protocol::TransportSequenceNumber>(libmedia_transfer_protocol::kRtpExtensionTransportSequenceNumber);
 		
 	}
 	p2p_peer_connection::~p2p_peer_connection()
@@ -221,6 +207,27 @@ namespace libp2p_peerconnection
 	int p2p_peer_connection::set_remote_sdp(const std::string & sdp)
 	{
 
+		{
+			const uint64_t k_year_in_ms = 365 * 24 * 3600 * 1000L;
+			ice_param_ = libice::IceCredentialsIterator::CreateRandomIceCredentials();
+			//std::string cname = rtc::CreateRandomString(16);
+			rtc::KeyParams key_params;
+			RTC_LOG(LS_INFO) << "dtls enabled, key type: " << key_params.type();
+			certificate_ = rtc::RTCCertificateGenerator::GenerateCertificate(key_params,
+				k_year_in_ms);
+			//SSLFingerprint
+			if (certificate_)
+			{
+				rtc::RTCCertificatePEM pem = certificate_->ToPEM();
+				RTC_LOG(LS_INFO) << "rtc certificate: \n" << pem.certificate();
+				//certificate_ = certificate;
+				transport_controller_->set_certificeate(certificate_);
+			}
+			else
+			{
+				RTC_LOG(LS_WARNING) << " open  certificate failed !!!\n";
+			}
+		}
 		 
 		
 		std::vector<std::string> fields;
@@ -516,7 +523,7 @@ namespace libp2p_peerconnection
 
 #endif 
 		while (true) {
-			auto  single_packet = std::make_shared<libmedia_transfer_protocol::RtpPacketToSend>();
+			auto  single_packet = std::make_shared<libmedia_transfer_protocol::RtpPacketToSend>(&rtp_header_extension_map_);
 
 		 
 
