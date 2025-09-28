@@ -612,17 +612,21 @@ namespace libp2p_peerconnection
 		send_info.rtp_timestamp = packet->Timestamp();
 		send_info.length = packet->size();
 		send_info.packet_type = packet->packet_type();
-		switch (*send_info.packet_type)
+		
+		if (send_info.packet_type.has_value())
 		{
-		case libmedia_transfer_protocol::RtpPacketMediaType::kAudio:
-		case libmedia_transfer_protocol::RtpPacketMediaType::kVideo:
-		{
-			send_info.media_ssrc = packet->Ssrc();
-			send_info.rtp_sequence_number = packet->SequenceNumber();
+			switch (send_info.packet_type.value())
+			{
+			case libmedia_transfer_protocol::RtpPacketMediaType::kAudio:
+			case libmedia_transfer_protocol::RtpPacketMediaType::kVideo:
+			{
+				send_info.media_ssrc = packet->Ssrc();
+				send_info.rtp_sequence_number = packet->SequenceNumber();
+			}
+			default:
+				break;
+			}
 		}
-		default:
-			break;
-		}  
 		transport_send_->OnAddPacket(send_info);
 	}
 	void p2p_peer_connection::SendPacket(const std::string & transport_name, libmedia_transfer_protocol::RtpPacketToSend*packet)
