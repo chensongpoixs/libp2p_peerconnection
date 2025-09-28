@@ -25,6 +25,9 @@
 #include "libmedia_transfer_protocol/rtp_rtcp/rtp_packet_to_send.h"
 #include "libmedia_transfer_protocol/rtp_rtcp/rtp_format.h"
 #include "modules/video_coding/codecs/h264/include/h264_globals.h"
+#include "api/task_queue/default_task_queue_factory.h"
+#include "libmedia_transfer_protocol/rtp_rtcp/rtp_rtcp_defines.h"
+#include "libice/network_types.h"
 //#include "libmedia_codec/builtin_video_bitrate_allocator_factory.h"
 //#include "libp2p_peerconnection/engine/webrtc_media_engine.h"
 namespace libp2p_peerconnection
@@ -148,23 +151,44 @@ namespace libp2p_peerconnection
 		, transport_controller_(nullptr)
 		//, signaling_thread_safety_()
 		, video_cache_(RTC_PACKET_CACHE_SIZE)
+		, transport_send_(nullptr)
 		//, media_engine_(nullptr)
 		//, video_bitrate_allocator_factory_ (libmedia_codec::CreateBuiltinVideoBitrateAllocatorFactory())
+		, rtp_rtcp_impl_(nullptr)
+		, task_queue_factory_(webrtc::CreateDefaultTaskQueueFactory())
 	{
 
 		if (context_->network_thread()->IsCurrent())
 		{
+			libmedia_transfer_protocol::RtpRtcpInterface::Configuration   config;
+			config.clock = webrtc::Clock::GetRealTimeClock();
+			rtp_rtcp_impl_ = std::make_unique<libmedia_transfer_protocol::ModuleRtpRtcpImpl>(config);
+
+			transport_send_ = std::make_unique<libmedia_transfer_protocol::RtpTransportControllerSend>(
+				config.clock, nullptr /*rtp_rtcp_impl_*/, task_queue_factory_.get());
 			transport_controller_ = std::make_unique<transport_controller>(context_->network_thread()
 				, context_->signaling_thread(), context_->default_network_manager(), 
 				context_->default_socket_factory());
+			transport_controller_->SignalIceTransportStateChanged.connect(this, & p2p_peer_connection::IceTransportStateChanged_n);
+			transport_controller_->SignalRtcpPacketReceived.connect(
+				this, & p2p_peer_connection::OnRtcpPacketReceived_n);
 		}
 		else
 		{
 			context_->network_thread()->PostTask(RTC_FROM_HERE, [this]() {
 				RTC_DCHECK_RUN_ON(context_->network_thread());
+				libmedia_transfer_protocol::RtpRtcpInterface::Configuration   config;
+				config.clock = webrtc::Clock::GetRealTimeClock();
+				rtp_rtcp_impl_ = std::make_unique<libmedia_transfer_protocol::ModuleRtpRtcpImpl>(config);
+				transport_send_ = std::make_unique<libmedia_transfer_protocol::RtpTransportControllerSend>(
+					config.clock, nullptr/*rtp_rtcp_impl_*/, task_queue_factory_.get());
 				transport_controller_ = std::make_unique<transport_controller>(context_->network_thread()
 					, context_->signaling_thread(), context_->default_network_manager(),
 					context_->default_socket_factory());
+				
+				transport_controller_->SignalIceTransportStateChanged.connect(this, & p2p_peer_connection::IceTransportStateChanged_n);
+				transport_controller_->SignalRtcpPacketReceived.connect(
+					this, & p2p_peer_connection::OnRtcpPacketReceived_n);
 			});
 			/*context_->signaling_thread()->Invoke<void>(RTC_FROM_HERE, [&]() {
 				RTC_DCHECK_RUN_ON(context_->signaling_thread());
@@ -485,6 +509,33 @@ namespace libp2p_peerconnection
 		return local_desc_->ToString();
 		return std::string();
 	}
+	void p2p_peer_connection::IceTransportStateChanged_n(libice::IceTransportInternal * transport)
+	{
+		//libice::IceConnectionState::kIceConnectionConnected;
+		if (transport->GetState() == libice::IceTransportState::STATE_COMPLETED)
+		{
+			ice_state = true;
+			transport_send_->OnNetworkOk(ice_state);
+		}
+		else if (transport->GetState() == libice::IceTransportState::STATE_FAILED)
+		{
+			ice_state = false;
+			transport_send_->OnNetworkOk(ice_state);
+		}
+	}
+	void p2p_peer_connection::OnRtcpPacketReceived_n(rtc::CopyOnWriteBuffer * packet, int64_t packet_time_us)
+	{
+		if (rtp_rtcp_impl_)
+		{
+			//signalie_thread_->PostTask();
+			rtc::CopyOnWriteBuffer   bufer(*packet);
+			context_->signaling_thread()->PostTask(/*webrtc::ToQueuedTask(signaling_thread_safety_.flag(),*/RTC_FROM_HERE,  
+				[this, packet_ = std::move(bufer) ]() {
+				RTC_DCHECK_RUN_ON(context_->signaling_thread());
+				rtp_rtcp_impl_->IncomingRtcpPacket(packet_.cdata(), packet_.size());
+			});
+		}
+	}
 	void   p2p_peer_connection::SendVideoEncode(std::shared_ptr<libmedia_codec::EncodedImage> encoded_image)
 	{
 	//	RTC_LOG_F(LS_INFO) << "";
@@ -522,7 +573,9 @@ namespace libp2p_peerconnection
 			config);
 
 #endif 
-		while (true) {
+
+		while (true) 
+		{
 			auto  single_packet = std::make_shared<libmedia_transfer_protocol::RtpPacketToSend>(&rtp_header_extension_map_);
 
 		 
@@ -535,10 +588,10 @@ namespace libp2p_peerconnection
 			if (!packetizer->NextPacket(single_packet.get())) {
 				break;
 			}
-
+			int16_t   packet_id = transprot_seq_++;
 			single_packet->SetSequenceNumber(video_seq_++);
-			single_packet->SetExtension<libmedia_transfer_protocol::TransportSequenceNumber>(transprot_seq_++);
-
+			single_packet->SetExtension<libmedia_transfer_protocol::TransportSequenceNumber>(packet_id);
+			AddPacketToTransportFeedback(packet_id, single_packet.get());
 			//if (video_send_stream_) {
 			//	video_send_stream_->UpdateRtpStats(single_packet, false, false);
 			//}
@@ -546,10 +599,46 @@ namespace libp2p_peerconnection
 			//AddVideoCache(single_packet);
 			// 发送数据包
 			// TODO, transport_name此处写死，后面可以换成变量
-			transport_controller_->send_rtp_packet("audio", (const char*)single_packet->data(),
-				single_packet->size());
+			SendPacket("audio",  single_packet.get() );
+			
 		}
 
+	}
+	void p2p_peer_connection::AddPacketToTransportFeedback(uint16_t transport_seq, 
+		 libmedia_transfer_protocol::RtpPacketToSend* packet)
+	{
+		libmedia_transfer_protocol::RtpPacketSendInfo send_info;
+		send_info.transport_sequence_number = transport_seq;
+		send_info.rtp_timestamp = packet->Timestamp();
+		send_info.length = packet->size();
+		send_info.packet_type = packet->packet_type();
+		switch (*send_info.packet_type)
+		{
+		case libmedia_transfer_protocol::RtpPacketMediaType::kAudio:
+		case libmedia_transfer_protocol::RtpPacketMediaType::kVideo:
+		{
+			send_info.media_ssrc = packet->Ssrc();
+			send_info.rtp_sequence_number = packet->SequenceNumber();
+		}
+		default:
+			break;
+		}  
+		transport_send_->OnAddPacket(send_info);
+	}
+	void p2p_peer_connection::SendPacket(const std::string & transport_name, libmedia_transfer_protocol::RtpPacketToSend*packet)
+	{
+		transport_controller_->send_rtp_packet(transport_name,(const char *) packet->data(),
+			packet->size());
+
+
+		rtc::SentPacket sent;
+		sent.send_time_ms = rtc::TimeMillis();
+		if (auto packet_id = packet->GetExtension<libmedia_transfer_protocol::TransportSequenceNumber>())
+		{
+			sent.packet_id = *packet_id;
+		}
+
+		transport_send_->OnSentPacket(sent);
 	}
 	void p2p_peer_connection::CreateVideoChannel()
 	{

@@ -58,8 +58,10 @@ namespace libp2p_peerconnection
 
 		bool OnTransportChanged(const std::string& mid,
 			 JsepTransport* transport);
-
-
+	public:
+		// Emitted whenever the new standards-compliant transport state changed.
+		sigslot::signal1<libice::IceTransportInternal*> SignalIceTransportStateChanged;
+		sigslot::signal2<rtc::CopyOnWriteBuffer*, int64_t> SignalRtcpPacketReceived;
 	public:
 
 		//void CreateVideoChannel(
@@ -162,7 +164,7 @@ namespace libp2p_peerconnection
 		bool   active_reset_srtp_params_ = true;
 
 
-		std::unique_ptr<libmedia_transfer_protocol::ModuleRtpRtcpImpl>   rtp_rtcp_impl_;
+		//std::unique_ptr<libmedia_transfer_protocol::ModuleRtpRtcpImpl>   rtp_rtcp_impl_;
 	};
 
 }

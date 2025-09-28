@@ -28,6 +28,7 @@
 #include "libmedia_codec/encoded_image.h"
 #include "libmedia_codec/x264_encoder.h"
 #include "libmedia_transfer_protocol/rtp_rtcp/rtp_header_extension_map.h"
+#include "libmedia_transfer_protocol/rtp_transport_controller_send.h"
 namespace libp2p_peerconnection
 {
 	struct RTCOfferAnswerOptions {
@@ -40,7 +41,7 @@ namespace libp2p_peerconnection
 		bool dtls_on = true;
 	};
 
-	class p2p_peer_connection :  public  libmedia_codec::EncodeImageObser// : public sigslot::has_slots<>
+	class p2p_peer_connection :  public  libmedia_codec::EncodeImageObser , public sigslot::has_slots<>
 	{
 	public:
 		p2p_peer_connection();
@@ -57,8 +58,19 @@ namespace libp2p_peerconnection
 
 		void CreateVideoChannel();
 
+
+		void IceTransportStateChanged_n(libice::IceTransportInternal* transport);
+		void OnRtcpPacketReceived_n(
+			rtc::CopyOnWriteBuffer* packet,
+			int64_t packet_time_us);
 	public:
 		virtual void   SendVideoEncode(std::shared_ptr<libmedia_codec::EncodedImage> encoded_image) override;
+
+		void AddPacketToTransportFeedback(uint16_t   transport_seq,
+			 libmedia_transfer_protocol::RtpPacketToSend* packet);
+
+	private:
+		void SendPacket(const std::string & transport_name, libmedia_transfer_protocol::RtpPacketToSend * packet);
 	private:
 		rtc::scoped_refptr<libp2p_peerconnection::ConnectionContext> context_;
 		std::unique_ptr<libp2p_peerconnection::SessionDescription> remote_desc_;
@@ -81,12 +93,17 @@ namespace libp2p_peerconnection
 
 		std::vector<std::shared_ptr<libmedia_transfer_protocol::RtpPacketToSend>> video_cache_;
 
-
+		std::unique_ptr< libmedia_transfer_protocol::RtpTransportControllerSend>    transport_send_;
 		//std::unique_ptr< libmedia_codec::I420Buffer>                     buffer_frame_;
 		//std::unique_ptr<libp2p_peerconnection::MediaEngineInterface>                    media_engine_;
 	/*	std::unique_ptr<libmedia_codec::VideoBitrateAllocatorFactory>
 			video_bitrate_allocator_factory_;*/
 		libmedia_transfer_protocol::	RtpHeaderExtensionMap            rtp_header_extension_map_;
+		bool    ice_state = false;
+		std::unique_ptr<libmedia_transfer_protocol::ModuleRtpRtcpImpl>   rtp_rtcp_impl_;
+
+
+		std::unique_ptr<webrtc::TaskQueueFactory>                       task_queue_factory_;
 	};
 
 }

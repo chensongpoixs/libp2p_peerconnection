@@ -51,7 +51,7 @@ namespace libp2p_peerconnection
 		RTC_DCHECK_RUN_ON(network_thread_);
 		UpdateAggregateStates_n();
 	})
-		, rtp_rtcp_impl_(nullptr)
+		//, rtp_rtcp_impl_(nullptr)
 	{
 		 
 		if (network_thread_->IsCurrent())
@@ -75,9 +75,7 @@ namespace libp2p_peerconnection
 
 #if 1
 		//signalie_thread_->Invoke<void>(RTC_FROM_HERE, [&] {
-			libmedia_transfer_protocol::RtpRtcpInterface::Configuration   config;
-			config.clock = webrtc::Clock::GetRealTimeClock();
-			rtp_rtcp_impl_ = std::make_unique<libmedia_transfer_protocol::ModuleRtpRtcpImpl>(config);
+			
 		//});
 #endif 		
 	 
@@ -88,7 +86,7 @@ namespace libp2p_peerconnection
 	{
 		// 资源释放问题 TODO@chensong  2025-09-25
 		//signaling_thread_safety_.~ScopedTaskSafety();
-		  rtp_rtcp_impl_.reset(nullptr);
+		//  rtp_rtcp_impl_.reset(nullptr);
 		 // ice_transport_factory_.reset();
 		 // network_thread_->Invoke<void>(RTC_FROM_HERE,[this]() {
 		//	  RTC_DCHECK_RUN_ON(network_thread_);
@@ -358,6 +356,7 @@ namespace libp2p_peerconnection
 	bool transport_controller::OnTransportChanged(const std::string & mid, JsepTransport * transport)
 	{
 		RTC_LOG_F(LS_INFO) << "";
+		//SignalRtcpPacketReceived();
 		/*if (config_.transport_observer) {
 			if (jsep_transport) {
 				return config_.transport_observer->OnTransportChanged(
@@ -556,7 +555,7 @@ namespace libp2p_peerconnection
 
 	void transport_controller::OnTransportGatheringState_n(
 		libice::IceTransportInternal* transport) {
-		RTC_LOG_F(LS_INFO) << "";
+		RTC_LOG_F(LS_INFO) << "gathering_state =" << transport->gathering_state();
 		UpdateAggregateStates_n();
 	}
 
@@ -614,7 +613,9 @@ namespace libp2p_peerconnection
 		libice::IceTransportInternal* transport) {
 		RTC_LOG_F(LS_INFO) << transport->transport_name() << " Transport "
 			<< transport->component()
-			<< " state changed. Check if state is complete.";
+			<< " state changed. Check if state is complete." << ", ice state : " << transport->GetState();
+
+
 		UpdateAggregateStates_n();
 	}
 
@@ -819,17 +820,17 @@ namespace libp2p_peerconnection
 	{
 		RTC_LOG_F(LS_INFO) << "";
 
-
-		if (rtp_rtcp_impl_)
-		{
-			//signalie_thread_->PostTask();
-			rtc::CopyOnWriteBuffer   bufer(*packet);
-			signalie_thread_->PostTask(/*webrtc::ToQueuedTask(signaling_thread_safety_.flag(),*/RTC_FROM_HERE,  
-				[this, packet_ = std::move(bufer) ]() {
-				RTC_DCHECK_RUN_ON(signalie_thread_);
-				rtp_rtcp_impl_->IncomingRtcpPacket(packet_.cdata(), packet_.size());
-			});
-		}
+		SignalRtcpPacketReceived(  std::move(packet), packet_time_us);
+		//if (rtp_rtcp_impl_)
+		//{
+		//	//signalie_thread_->PostTask();
+		//	rtc::CopyOnWriteBuffer   bufer(*packet);
+		//	signalie_thread_->PostTask(/*webrtc::ToQueuedTask(signaling_thread_safety_.flag(),*/RTC_FROM_HERE,  
+		//		[this, packet_ = std::move(bufer) ]() {
+		//		RTC_DCHECK_RUN_ON(signalie_thread_);
+		//		rtp_rtcp_impl_->IncomingRtcpPacket(packet_.cdata(), packet_.size());
+		//	});
+		//}
 	}
 
 }
