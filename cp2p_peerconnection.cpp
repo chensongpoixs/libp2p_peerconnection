@@ -160,12 +160,7 @@ namespace libp2p_peerconnection
 
 		if (context_->network_thread()->IsCurrent())
 		{
-			libmedia_transfer_protocol::RtpRtcpInterface::Configuration   config;
-			config.clock = webrtc::Clock::GetRealTimeClock();
-			rtp_rtcp_impl_ = std::make_unique<libmedia_transfer_protocol::ModuleRtpRtcpImpl>(config);
-
-			transport_send_ = std::make_unique<libmedia_transfer_protocol::RtpTransportControllerSend>(
-				config.clock, nullptr /*rtp_rtcp_impl_*/, task_queue_factory_.get());
+			
 			transport_controller_ = std::make_unique<transport_controller>(context_->network_thread()
 				, context_->signaling_thread(), context_->default_network_manager(), 
 				context_->default_socket_factory());
@@ -177,11 +172,7 @@ namespace libp2p_peerconnection
 		{
 			context_->network_thread()->PostTask(RTC_FROM_HERE, [this]() {
 				RTC_DCHECK_RUN_ON(context_->network_thread());
-				libmedia_transfer_protocol::RtpRtcpInterface::Configuration   config;
-				config.clock = webrtc::Clock::GetRealTimeClock();
-				rtp_rtcp_impl_ = std::make_unique<libmedia_transfer_protocol::ModuleRtpRtcpImpl>(config);
-				transport_send_ = std::make_unique<libmedia_transfer_protocol::RtpTransportControllerSend>(
-					config.clock, nullptr/*rtp_rtcp_impl_*/, task_queue_factory_.get());
+				
 				transport_controller_ = std::make_unique<transport_controller>(context_->network_thread()
 					, context_->signaling_thread(), context_->default_network_manager(),
 					context_->default_socket_factory());
@@ -502,6 +493,18 @@ namespace libp2p_peerconnection
 			if (!answer_bundle.content_names_.empty()) {
 				local_desc_->content_groups_ .emplace_back (answer_bundle);
 			}
+		}
+		{
+			context_->network_thread()->PostTask(RTC_FROM_HERE, [this]() {
+				RTC_DCHECK_RUN_ON(context_->network_thread());
+				libmedia_transfer_protocol::RtpRtcpInterface::Configuration   config;
+				config.clock = webrtc::Clock::GetRealTimeClock();
+				config.local_media_ssrc = local_video_ssrc_;
+				transport_send_ = std::make_unique<libmedia_transfer_protocol::RtpTransportControllerSend>(
+					config.clock, nullptr/*rtp_rtcp_impl_*/, task_queue_factory_.get());
+				config.transport_feedback_callback = transport_send_.get();
+				rtp_rtcp_impl_ = std::make_unique<libmedia_transfer_protocol::ModuleRtpRtcpImpl>(config);
+			});
 		}
 
 		transport_controller_->set_local_sdp(local_desc_.get(), certificate_);

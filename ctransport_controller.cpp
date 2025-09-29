@@ -615,8 +615,9 @@ namespace libp2p_peerconnection
 			<< transport->component()
 			<< " state changed. Check if state is complete." << ", ice state : " << transport->GetState();
 
-
+		
 		UpdateAggregateStates_n();
+		SignalIceTransportStateChanged(transport);
 	}
 
 	void transport_controller::UpdateAggregateStates_n() {
@@ -818,7 +819,7 @@ namespace libp2p_peerconnection
 
 	void transport_controller::OnRtcpPacketReceived_n(rtc::CopyOnWriteBuffer * packet, int64_t packet_time_us)
 	{
-		RTC_LOG_F(LS_INFO) << "";
+		//RTC_LOG_F(LS_INFO) << "";
 
 		SignalRtcpPacketReceived(  std::move(packet), packet_time_us);
 		//if (rtp_rtcp_impl_)
