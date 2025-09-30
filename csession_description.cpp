@@ -140,8 +140,8 @@ inline void MediaContentDescriptionImpl<C>::BuildSsrc(MediaContentDescriptionImp
 		// Éú³Éssrc
 		for (auto ssrc : stream.ssrcs) {
 			ss << "a=ssrc:" << ssrc << " cname:" << stream.cname << "\r\n";
-			ss << "a=ssrc:" << ssrc << " msid:" << stream.stream_ids_[0]
-				<< " " << stream.id << "\r\n";
+		//	ss << "a=ssrc:" << ssrc << " msid:" << stream.stream_ids_[0]
+			//	<< " " << stream.id << "\r\n";
 		}
 	}
 

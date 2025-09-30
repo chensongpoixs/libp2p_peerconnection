@@ -41,7 +41,9 @@ namespace libp2p_peerconnection
 		bool dtls_on = true;
 	};
 
-	class p2p_peer_connection :  public  libmedia_codec::EncodeImageObser , public sigslot::has_slots<>
+	class p2p_peer_connection :  public  libmedia_codec::EncodeImageObser ,
+		public libmedia_transfer_protocol::RtcpBandwidthObserver,
+		public sigslot::has_slots<>
 	{
 	public:
 		p2p_peer_connection();
@@ -63,6 +65,19 @@ namespace libp2p_peerconnection
 		void OnRtcpPacketReceived_n(
 			rtc::CopyOnWriteBuffer* packet,
 			int64_t packet_time_us);
+
+
+	public:
+		//  bandwith callback 
+		void  OnReceivedEstimatedBitrate(uint32_t bitrate) override;
+		void  OnReceivedRtcpReceiverReport(
+			const libmedia_transfer_protocol::ReportBlockList& report_blocks,
+			int64_t rtt,
+			int64_t now_ms) override;
+
+		void OnNetworkInfo(const libmedia_transfer_protocol::ReportBlockList&  reportblocks, int64_t rtt_ms, int64_t now_ms);
+	
+	
 	public:
 		virtual void   SendVideoEncode(std::shared_ptr<libmedia_codec::EncodedImage> encoded_image) override;
 

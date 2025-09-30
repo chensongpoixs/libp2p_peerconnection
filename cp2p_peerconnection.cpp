@@ -46,7 +46,7 @@ namespace libp2p_peerconnection
 			return fields[1];
 		}
 		static bool ParseCandidates(MediaContentDescription* media_content,
-			const std::string& line, libice::Candidate & c)
+			const std::string& line, std::vector< libice::Candidate> & all_c)
 		{
 			if (line.find("a=candidate:") == std::string::npos) {
 				return true;
@@ -63,7 +63,7 @@ namespace libp2p_peerconnection
 				return false;
 			}
 
-			 
+			libice::Candidate  c;
 			c.set_foundation(  fields[0]);
 			c.set_component(  std::atoi(fields[1].c_str()));
 			c.set_protocol(  fields[2]);
@@ -71,7 +71,7 @@ namespace libp2p_peerconnection
 			uint16_t  port = std::atoi(fields[5].c_str());
 			c.set_address(  rtc::SocketAddress(fields[4], port));
 			c.set_type(  fields[7]);
-
+			all_c.push_back(c);
 			//media_content->AddCandidate(c);
 			return true;
 		}
@@ -269,8 +269,9 @@ namespace libp2p_peerconnection
 		libice::TransportInfo  audio_td;
 		//auto video_td = std::make_unique<TransportDescription>();
 		libice::TransportInfo  video_td;
-		libice::Candidate audio_c;
-		libice::Candidate video_c;
+		std::vector<libice::Candidate>  all_candidate;
+	//	libice::Candidate audio_c;
+		//libice::Candidate video_c;
 		ContentInfo  audio_content_info;
 		
 		ContentInfo video_content_info;
@@ -326,7 +327,7 @@ namespace libp2p_peerconnection
 			
 			if ("audio" == mid) {
 				
-				if (!ParseCandidates(audio_content.get(), field, audio_c)) {
+				if (!ParseCandidates(audio_content.get(), field, all_candidate)) {
 					RTC_LOG(LS_WARNING) << "parse candidate failed: " << field;
 					return -1;
 				}
@@ -337,7 +338,7 @@ namespace libp2p_peerconnection
 				}
 			}
 			else if ("video" == mid) {
-				if (!ParseCandidates(video_content.get(), field, video_c)) {
+				if (!ParseCandidates(video_content.get(), field, all_candidate)) {
 					RTC_LOG(LS_WARNING) << "parse candidate failed: " << field;
 					return -1;
 				}
@@ -374,7 +375,11 @@ namespace libp2p_peerconnection
 		
 
 		transport_controller_->set_remote_sdp(remote_desc_.get());
-		transport_controller_->set_remote_candidate(audio_c);
+		for (const libice::Candidate & candidate:all_candidate)
+		{
+			transport_controller_->set_remote_candidate(candidate);
+		}
+		
 		return 0;
 	}
 	std::string p2p_peer_connection::create_answer(const RTCOfferAnswerOptions & options, const std::string & stream_id)
@@ -403,17 +408,34 @@ namespace libp2p_peerconnection
 			//AudioContentDescription audio_content;
 			audio_content->direction_ = (GetDirection(options.send_audio, options.recv_audio));
 			audio_content->rtcp_mux_ = (options.use_rtcp_mux);
+			
 			libice::TransportInfo  transport_info;
 			transport_info.content_name = "audio";
 			transport_info.description.ice_pwd = ice_param_.pwd;
 			transport_info.description.ice_ufrag = ice_param_.ufrag;
 			transport_info.description.identity_fingerprint = rtc::SSLFingerprint::CreateFromCertificate(*certificate_);
+			transport_info.description.connection_role = libice::CONNECTIONROLE_ACTIVE;
 			local_desc_->transport_infos_.emplace_back(transport_info);
 			ContentInfo  content;// = new ContentInfo();
 			content.type = libp2p_peerconnection::MediaProtocolType::kRtp;
 			content.name = transport_info.content_name;
 			
+			libmedia_transfer_protocol::AudioCodec audio_codec;
+			audio_codec.id = 111;
+			audio_codec.name = "opus";
+			audio_codec.channels = 2;
 			
+			audio_codec.clockrate = 48000;
+			// a=fmtp:111 minptime=10;useinbandfec=1
+			audio_codec.params.insert(std::make_pair("minptime", "10"));
+			audio_codec.params.insert(std::make_pair("useinbandfec", "1"));
+
+			// rtcp-fb:111  transport-cc 
+			libmedia_transfer_protocol::FeedbackParam feedbackparam;
+			feedbackparam.id_ = "transport-cc";
+			//feedbackparam.param_ = "";
+			audio_codec.feedback_params.Add(feedbackparam);
+			audio_content->codecs_.push_back(audio_codec);
 			// 如果发送音频，需要创建stream
 			if (options.send_audio) {
 				libmedia_transfer_protocol::StreamParams audio_stream;
@@ -422,6 +444,7 @@ namespace libp2p_peerconnection
 				audio_stream.cname = cname;
 				local_audio_ssrc_ = rtc::CreateRandomId();
 				audio_stream.ssrcs.push_back(local_audio_ssrc_);
+				
 				audio_content->send_streams_.emplace_back(audio_stream);
 			}
 			content.description_ = std::move((audio_content));
@@ -437,6 +460,7 @@ namespace libp2p_peerconnection
 			transport_info.description.identity_fingerprint = rtc::SSLFingerprint::CreateFromCertificate(*certificate_);
 			transport_info.description.ice_pwd = ice_param_.pwd;
 			transport_info.description.ice_ufrag = ice_param_.ufrag;
+			transport_info.description.connection_role = libice::CONNECTIONROLE_ACTIVE;
 			local_desc_->transport_infos_.emplace_back(transport_info);
 
 			ContentInfo  content;// = new ContentInfo();// (libice::MediaProtocolType::kRtp);
@@ -452,8 +476,8 @@ namespace libp2p_peerconnection
 				local_video_ssrc_ = rtc::CreateRandomId();
 				local_video_rtx_ssrc_ = rtc::CreateRandomId();
 				video_stream.ssrcs.push_back(local_video_ssrc_);
-				video_stream.ssrcs.push_back(local_video_rtx_ssrc_);
-
+				//video_stream.ssrcs.push_back(local_video_rtx_ssrc_);
+				// 107
 				// 分组
 				libmedia_transfer_protocol::SsrcGroup sg;// ("FID", { local_video_ssrc_ , local_video_rtx_ssrc_ });
 				sg.semantics = "FID";
@@ -472,7 +496,53 @@ namespace libp2p_peerconnection
 				video_rtx_stream.cname = cname;
 				video_rtx_stream.ssrcs.push_back(local_video_rtx_ssrc_);
 				video_content->send_streams_.emplace_back(video_rtx_stream);
+				libmedia_transfer_protocol::VideoCodec video_codec;
+				video_codec.id =  107;
+				video_codec.name = "H264";
+				video_codec.clockrate = 90000;
+				// a=fmtp:107 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f
 
+				video_codec.params.insert(std::make_pair("level-asymmetry-allowed", "1"));
+				video_codec.params.insert(std::make_pair("packetization-mode", "1"));
+				video_codec.params.insert(std::make_pair("profile-level-id", "42e01f"));
+				//video_codec.params.insert(std::make_pair(std::to_string(video_codec.id), "useinbandfec=1"));
+
+				/*
+					a=rtpmap:107 H264/90000
+					a=rtcp-fb:107 goog-remb
+					a=rtcp-fb:107 transport-cc
+					a=rtcp-fb:107 ccm fir
+					a=rtcp-fb:107 nack
+					a=rtcp-fb:107 nack pli
+				*/
+				libmedia_transfer_protocol::FeedbackParam feedbackparam;
+				feedbackparam.id_ = "goog-remb";
+				//feedbackparam.param_ = "transport-cc";
+				video_codec.feedback_params.Add(feedbackparam);
+				feedbackparam.id_ = "transport-cc"; 
+				video_codec.feedback_params.Add(feedbackparam); 
+				feedbackparam.id_ = "ccm";
+				feedbackparam.param_ = "fir";
+				video_codec.feedback_params.Add(feedbackparam); 
+				feedbackparam.id_ = "nack";
+				feedbackparam.param_ = "";
+				video_codec.feedback_params.Add(feedbackparam); 
+				feedbackparam.id_ = "nack";
+				feedbackparam.param_ = "pli";
+				video_codec.feedback_params.Add(feedbackparam);  
+
+				libmedia_transfer_protocol::VideoCodec video_rtx_codec;
+				video_rtx_codec.id = 99;
+				video_rtx_codec.name = "rtx";
+				video_rtx_codec.clockrate = 90000;
+				/*
+					a=rtpmap:99 rtx/90000
+					a=fmtp:99 apt=107
+				*/
+				video_rtx_codec.id = 99;
+				video_rtx_codec.params.insert(std::make_pair("apt", std::to_string(video_codec.id)));
+				video_content->codecs_.push_back(video_codec);
+				video_content->codecs_.push_back(video_rtx_codec);
 			//	CreateVideoSendStream(video_content.get());
 			}
 			content.description_ = (std::move(video_content));
@@ -503,6 +573,8 @@ namespace libp2p_peerconnection
 				transport_send_ = std::make_unique<libmedia_transfer_protocol::RtpTransportControllerSend>(
 					config.clock, nullptr/*rtp_rtcp_impl_*/, task_queue_factory_.get());
 				config.transport_feedback_callback = transport_send_.get();
+				config.bandwidth_callback = this;// transport_send_.get();
+			//	transport_send_->SignalOnNetworkInfo();
 				rtp_rtcp_impl_ = std::make_unique<libmedia_transfer_protocol::ModuleRtpRtcpImpl>(config);
 			});
 		}
@@ -537,6 +609,21 @@ namespace libp2p_peerconnection
 				RTC_DCHECK_RUN_ON(context_->signaling_thread());
 				rtp_rtcp_impl_->IncomingRtcpPacket(packet_.cdata(), packet_.size());
 			});
+		}
+	}
+	void p2p_peer_connection::OnNetworkInfo(const libmedia_transfer_protocol:: ReportBlockList&  reportblocks, int64_t rtt_ms, int64_t now_ms)
+	{
+		if (transport_send_)
+		{
+			transport_send_->OnRttUpdate(rtt_ms);
+			std::stringstream cmd;
+			cmd << " rtt: " << rtt_ms << ", now_ms : " << now_ms <<"\r\n";
+			for (const libmedia_transfer_protocol::RTCPReportBlock & reportblock : reportblocks)
+			{
+				cmd << reportblock.ToString();
+			}
+		//	RTC_LOG(LS_INFO) << cmd.str();
+			
 		}
 	}
 	void   p2p_peer_connection::SendVideoEncode(std::shared_ptr<libmedia_codec::EncodedImage> encoded_image)
@@ -655,5 +742,21 @@ namespace libp2p_peerconnection
 	/*	libmedia_transfer_protocol::VideoMediaChannel* media_channel = media_engine_->video().CreateMediaChannel(
 			  media_config, options, crypto_options,
 			video_bitrate_allocator_factory_.get());*/
+	}
+
+
+	void p2p_peer_connection::OnReceivedEstimatedBitrate(uint32_t bitrate)
+	{
+		RTC_LOG(LS_INFO) << "bitrate:" << bitrate;
+	}
+	void p2p_peer_connection::OnReceivedRtcpReceiverReport(
+		const libmedia_transfer_protocol::ReportBlockList& report_blocks,
+		int64_t rtt,
+		int64_t now_ms)
+	{
+		//for (const libmedia_transfer_protocol::RTCPReportBlock & reportblock : report_blocks)
+		{
+			OnNetworkInfo(report_blocks, rtt, now_ms);
+		}
 	}
 }
