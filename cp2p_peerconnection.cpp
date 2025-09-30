@@ -615,13 +615,14 @@ namespace libp2p_peerconnection
 	{
 		if (transport_send_)
 		{
-			transport_send_->OnRttUpdate(rtt_ms);
-			std::stringstream cmd;
-			cmd << " rtt: " << rtt_ms << ", now_ms : " << now_ms <<"\r\n";
-			for (const libmedia_transfer_protocol::RTCPReportBlock & reportblock : reportblocks)
-			{
-				cmd << reportblock.ToString();
-			}
+			transport_send_->OnRttUpdate(rtt_ms, webrtc::Timestamp::Millis(now_ms));
+			transport_send_->OnReceivedRtcpReceiverReportBlocks(reportblocks, now_ms);
+			//std::stringstream cmd;
+			//cmd << " rtt: " << rtt_ms << ", now_ms : " << now_ms <<"\r\n";
+			//for (const libmedia_transfer_protocol::RTCPReportBlock & reportblock : reportblocks)
+			//{
+			//	cmd << reportblock.ToString();
+			//}
 		//	RTC_LOG(LS_INFO) << cmd.str();
 			
 		}
