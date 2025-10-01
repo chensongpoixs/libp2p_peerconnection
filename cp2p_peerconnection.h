@@ -67,6 +67,11 @@ namespace libp2p_peerconnection
 			int64_t packet_time_us);
 
 
+
+		sigslot::signal2<p2p_peer_connection*, const libice::TargetTransferRate&> SignalTargetTransferRate;
+
+
+		void OnTragetTransferRate(libmedia_transfer_protocol::RtpTransportControllerSend* , const libice::TargetTransferRate& target);
 	public:
 		//  bandwith callback 
 		void  OnReceivedEstimatedBitrate(uint32_t bitrate) override;

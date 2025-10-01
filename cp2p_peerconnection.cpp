@@ -573,6 +573,7 @@ namespace libp2p_peerconnection
 				transport_send_ = std::make_unique<libmedia_transfer_protocol::RtpTransportControllerSend>(
 					config.clock, nullptr/*rtp_rtcp_impl_*/, task_queue_factory_.get());
 				config.transport_feedback_callback = transport_send_.get();
+				transport_send_->SignalTargetTransferRate.connect(this, &p2p_peer_connection::OnTragetTransferRate);
 				config.bandwidth_callback = this;// transport_send_.get();
 			//	transport_send_->SignalOnNetworkInfo();
 				rtp_rtcp_impl_ = std::make_unique<libmedia_transfer_protocol::ModuleRtpRtcpImpl>(config);
@@ -745,6 +746,11 @@ namespace libp2p_peerconnection
 			video_bitrate_allocator_factory_.get());*/
 	}
 
+
+	void p2p_peer_connection::OnTragetTransferRate(libmedia_transfer_protocol::RtpTransportControllerSend *, const libice::TargetTransferRate & target)
+	{
+		SignalTargetTransferRate(this, target);
+	}
 
 	void p2p_peer_connection::OnReceivedEstimatedBitrate(uint32_t bitrate)
 	{
