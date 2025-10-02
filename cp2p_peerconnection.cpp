@@ -652,6 +652,7 @@ namespace libp2p_peerconnection
 	//	encrypted_video_payload.SetData(encoded_image->size(), encoded_image->data());
 	//	rtp_video_hreader.video_type_header = absl::variant<webrtc::RTPVideoHeaderH264>;
 		webrtc::RTPVideoHeaderH264  h;
+		// 多包和分包
 		h.packetization_mode = webrtc::H264PacketizationMode::NonInterleaved;
 		rtp_video_hreader.video_type_header = h;
 		std::unique_ptr<libmedia_transfer_protocol::RtpPacketizer> packetizer = 
@@ -703,7 +704,7 @@ namespace libp2p_peerconnection
 	void p2p_peer_connection::SendAudioEncode(
 		std::shared_ptr<libmedia_codec::AudioEncoder::EncodedInfoLeaf> frame)
 	{
-
+		//return;
 		auto  packet = std::make_shared<libmedia_transfer_protocol::RtpPacketToSend>(&rtp_header_extension_map_);
 		//packet->SetMarker(MarkerBit(frame_type, payload_type));
 		packet->SetPayloadType(audio_pt_);
