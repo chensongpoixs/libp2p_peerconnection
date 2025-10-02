@@ -30,6 +30,9 @@
 #include "libmedia_transfer_protocol/rtp_rtcp/rtp_header_extension_map.h"
 #include "libmedia_transfer_protocol/rtp_transport_controller_send.h"
 #include "libmedia_transfer_protocol/pacing/pacing_controller.h"
+#include "libmedia_codec/audio_codec/opus_encoder.h"
+#include "libmedia_codec/audio_codec/opus_encoder.h"
+#include "libmedia_codec/audio_encoder.h"
 namespace libp2p_peerconnection
 {
 	struct RTCOfferAnswerOptions {
@@ -43,6 +46,7 @@ namespace libp2p_peerconnection
 	};
 
 	class p2p_peer_connection :  public  libmedia_codec::EncodeImageObser ,
+		public libmedia_codec::EncodeAudioObser,
 		public libmedia_transfer_protocol::RtcpBandwidthObserver,
 		public libmedia_transfer_protocol::PacingController::PacketSender,
 		public sigslot::has_slots<>
@@ -87,7 +91,7 @@ namespace libp2p_peerconnection
 	
 	public:
 		virtual void   SendVideoEncode(std::shared_ptr<libmedia_codec::EncodedImage> encoded_image) override;
-
+		void   SendAudioEncode(std::shared_ptr<libmedia_codec::AudioEncoder::EncodedInfoLeaf> f) override;
 		void AddPacketToTransportFeedback(uint16_t   transport_seq,
 			 libmedia_transfer_protocol::RtpPacketToSend* packet);
 
@@ -117,10 +121,12 @@ namespace libp2p_peerconnection
 		uint32_t local_video_rtx_ssrc_ = 0;
 		uint8_t video_pt_ = 0;
 		uint8_t video_rtx_pt_ = 0;
+		uint8_t audio_pt_ = 0;
 		rtc::scoped_refptr<rtc::RTCCertificate> certificate_;
 		libice::IceParameters ice_param_;
 
 		uint16_t video_seq_ = 1000;
+		uint16_t audio_seq_ = 1000;
 		uint16_t  transprot_seq_ = 1000;
 
 		std::vector<std::shared_ptr<libmedia_transfer_protocol::RtpPacketToSend>> video_cache_;

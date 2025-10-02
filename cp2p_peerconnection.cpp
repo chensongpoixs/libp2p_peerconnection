@@ -316,6 +316,7 @@ namespace libp2p_peerconnection
 					//audio_content.reset(remote_desc_->GetContentByName(mid)->media_description());
 					audio_td.content_name = mid;
 					audio_content_info.name = mid;
+					audio_pt_ = std::atoi(items[3].c_str());
 				}
 				else if (mid == "video") {
 					//remote_desc_->AddContent(mid, libice::MediaProtocolType::kRtp, std::move(video_content));
@@ -699,6 +700,27 @@ namespace libp2p_peerconnection
 		}
 		transport_send_->EnqueuePacket(std::move(packets));
 	}
+	void p2p_peer_connection::SendAudioEncode(
+		std::shared_ptr<libmedia_codec::AudioEncoder::EncodedInfoLeaf> frame)
+	{
+
+		auto  packet = std::make_shared<libmedia_transfer_protocol::RtpPacketToSend>(&rtp_header_extension_map_);
+		//packet->SetMarker(MarkerBit(frame_type, payload_type));
+		packet->SetPayloadType(audio_pt_);
+		packet->SetTimestamp(frame->encoded_timestamp);
+		packet->SetSsrc(local_audio_ssrc_);
+		packet->SetSequenceNumber(audio_seq_++);
+		packet->set_packet_type(libmedia_transfer_protocol::RtpPacketMediaType::kAudio);
+
+		uint8_t* payload = packet->AllocatePayload(frame->encoded_bytes);
+		if (!payload)  // Too large payload buffer.
+		{
+			return;
+		}
+		memcpy(payload, frame->audio_encode_data.data(), frame->encoded_bytes);
+		SendPacket("audio", packet.get());
+		//packet->set_capture_time_ms(clock_->TimeInMilliseconds());
+	}
 	void p2p_peer_connection::AddPacketToTransportFeedback(uint16_t transport_seq, 
 		 libmedia_transfer_protocol::RtpPacketToSend* packet)
 	{
@@ -730,14 +752,14 @@ namespace libp2p_peerconnection
 			packet->size());
 
 
-		rtc::SentPacket sent;
-		sent.send_time_ms = rtc::TimeMillis();
-		if (auto packet_id = packet->GetExtension<libmedia_transfer_protocol::TransportSequenceNumber>())
-		{
-			sent.packet_id = *packet_id;
-		}
-
-		transport_send_->OnSentPacket(sent);
+		//rtc::SentPacket sent;
+		//sent.send_time_ms = rtc::TimeMillis();
+		//if (auto packet_id = packet->GetExtension<libmedia_transfer_protocol::TransportSequenceNumber>())
+		//{
+		//	sent.packet_id = *packet_id;
+		//}
+		//
+		//transport_send_->OnSentPacket(sent);
 	}
 	  void p2p_peer_connection::SendPacket(std::unique_ptr<libmedia_transfer_protocol::RtpPacketToSend> packet,
 		const libice::PacedPacketInfo& cluster_info)
