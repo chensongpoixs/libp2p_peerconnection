@@ -29,6 +29,7 @@
 #include "libmedia_codec/x264_encoder.h"
 #include "libmedia_transfer_protocol/rtp_rtcp/rtp_header_extension_map.h"
 #include "libmedia_transfer_protocol/rtp_transport_controller_send.h"
+#include "libmedia_transfer_protocol/pacing/pacing_controller.h"
 namespace libp2p_peerconnection
 {
 	struct RTCOfferAnswerOptions {
@@ -43,6 +44,7 @@ namespace libp2p_peerconnection
 
 	class p2p_peer_connection :  public  libmedia_codec::EncodeImageObser ,
 		public libmedia_transfer_protocol::RtcpBandwidthObserver,
+		public libmedia_transfer_protocol::PacingController::PacketSender,
 		public sigslot::has_slots<>
 	{
 	public:
@@ -89,6 +91,16 @@ namespace libp2p_peerconnection
 		void AddPacketToTransportFeedback(uint16_t   transport_seq,
 			 libmedia_transfer_protocol::RtpPacketToSend* packet);
 
+
+	public:
+
+		//libmedia_transfer_protocol::PacingController::PacketSender
+		virtual void SendPacket(std::unique_ptr<libmedia_transfer_protocol::RtpPacketToSend> packet,
+			const libice::PacedPacketInfo& cluster_info) override;
+		// Should be called after each call to SendPacket().
+		virtual std::vector<std::unique_ptr<libmedia_transfer_protocol::RtpPacketToSend>> FetchFec() override;
+		virtual std::vector<std::unique_ptr<libmedia_transfer_protocol::RtpPacketToSend>> GeneratePadding(
+			webrtc::DataSize size) override;
 	private:
 		void SendPacket(const std::string & transport_name, libmedia_transfer_protocol::RtpPacketToSend * packet);
 	private:

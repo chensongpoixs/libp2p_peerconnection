@@ -571,7 +571,7 @@ namespace libp2p_peerconnection
 				config.clock = webrtc::Clock::GetRealTimeClock();
 				config.local_media_ssrc = local_video_ssrc_;
 				transport_send_ = std::make_unique<libmedia_transfer_protocol::RtpTransportControllerSend>(
-					config.clock, nullptr/*rtp_rtcp_impl_*/, task_queue_factory_.get());
+					config.clock, this/*rtp_rtcp_impl_*/, task_queue_factory_.get());
 				config.transport_feedback_callback = transport_send_.get();
 				transport_send_->SignalTargetTransferRate.connect(this, &p2p_peer_connection::OnTragetTransferRate);
 				config.bandwidth_callback = this;// transport_send_.get();
@@ -665,7 +665,7 @@ namespace libp2p_peerconnection
 			config);
 
 #endif 
-
+		std::vector< std::unique_ptr<libmedia_transfer_protocol::RtpPacketToSend>>  packets;
 		while (true) 
 		{
 			auto  single_packet = std::make_shared<libmedia_transfer_protocol::RtpPacketToSend>(&rtp_header_extension_map_);
@@ -682,6 +682,7 @@ namespace libp2p_peerconnection
 			}
 			int16_t   packet_id = transprot_seq_++;
 			single_packet->SetSequenceNumber(video_seq_++);
+			single_packet->set_packet_type(libmedia_transfer_protocol::RtpPacketMediaType::kVideo);
 			single_packet->SetExtension<libmedia_transfer_protocol::TransportSequenceNumber>(packet_id);
 			AddPacketToTransportFeedback(packet_id, single_packet.get());
 			//if (video_send_stream_) {
@@ -691,10 +692,12 @@ namespace libp2p_peerconnection
 			//AddVideoCache(single_packet);
 			// 发送数据包
 			// TODO, transport_name此处写死，后面可以换成变量
-			SendPacket("audio",  single_packet.get() );
-			
+			//SendPacket("audio",  single_packet.get() );
+			//std::unique_ptr<libmedia_transfer_protocol::RtpPacketToSend> packet =
+			//	std::make_unique<libmedia_transfer_protocol::RtpPacketToSend>(*single_packet);
+			packets.emplace_back(std::make_unique<libmedia_transfer_protocol::RtpPacketToSend>(*single_packet));
 		}
-
+		transport_send_->EnqueuePacket(std::move(packets));
 	}
 	void p2p_peer_connection::AddPacketToTransportFeedback(uint16_t transport_seq, 
 		 libmedia_transfer_protocol::RtpPacketToSend* packet)
@@ -735,6 +738,33 @@ namespace libp2p_peerconnection
 		}
 
 		transport_send_->OnSentPacket(sent);
+	}
+	  void p2p_peer_connection::SendPacket(std::unique_ptr<libmedia_transfer_protocol::RtpPacketToSend> packet,
+		const libice::PacedPacketInfo& cluster_info)
+	{
+		  transport_controller_->send_rtp_packet("audio", (const char *)packet->data(),
+			  packet->size());
+		  //发送统计数据
+		  rtc::SentPacket sent;
+		  sent.send_time_ms = rtc::TimeMillis();
+		  if (auto packet_id = packet->GetExtension<libmedia_transfer_protocol::TransportSequenceNumber>())
+		  {
+			  sent.packet_id = *packet_id;
+		  }
+
+		  transport_send_->OnSentPacket(sent);
+	}
+	// Should be called after each call to SendPacket().
+	  std::vector<std::unique_ptr<libmedia_transfer_protocol::RtpPacketToSend>> p2p_peer_connection::FetchFec()
+	{
+		  std::vector<std::unique_ptr<libmedia_transfer_protocol::RtpPacketToSend>> result;
+		  return result;
+	}
+	  std::vector<std::unique_ptr<libmedia_transfer_protocol::RtpPacketToSend>> p2p_peer_connection::GeneratePadding(
+		webrtc::DataSize size)
+	{
+		  std::vector<std::unique_ptr<libmedia_transfer_protocol::RtpPacketToSend>> result;
+		  return result;
 	}
 	void p2p_peer_connection::CreateVideoChannel()
 	{
