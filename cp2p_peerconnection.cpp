@@ -588,7 +588,6 @@ namespace libp2p_peerconnection
 	}
 	void p2p_peer_connection::IceTransportStateChanged_n(libice::IceTransportInternal * transport)
 	{
-		//libice::IceConnectionState::kIceConnectionConnected;
 		if (transport->GetState() == libice::IceTransportState::STATE_COMPLETED)
 		{
 			ice_state = true;
@@ -667,6 +666,7 @@ namespace libp2p_peerconnection
 			config);
 
 #endif 
+
 		std::vector< std::unique_ptr<libmedia_transfer_protocol::RtpPacketToSend>>  packets;
 		while (true) 
 		{

@@ -45,8 +45,7 @@ namespace libp2p_peerconnection
 		bool dtls_on = true;
 	};
 
-	class p2p_peer_connection :  public  libmedia_codec::EncodeImageObser ,
-		public libmedia_codec::EncodeAudioObser,
+	class p2p_peer_connection : 
 		public libmedia_transfer_protocol::RtcpBandwidthObserver,
 		public libmedia_transfer_protocol::PacingController::PacketSender,
 		public sigslot::has_slots<>
@@ -90,8 +89,11 @@ namespace libp2p_peerconnection
 	
 	
 	public:
-		virtual void   SendVideoEncode(std::shared_ptr<libmedia_codec::EncodedImage> encoded_image) override;
-		void   SendAudioEncode(std::shared_ptr<libmedia_codec::AudioEncoder::EncodedInfoLeaf> f) override;
+		  void   SendVideoEncode(std::shared_ptr<libmedia_codec::EncodedImage> encoded_image)  ;
+		void   SendAudioEncode(std::shared_ptr<libmedia_codec::AudioEncoder::EncodedInfoLeaf> f)  ;
+
+
+
 		void AddPacketToTransportFeedback(uint16_t   transport_seq,
 			 libmedia_transfer_protocol::RtpPacketToSend* packet);
 
