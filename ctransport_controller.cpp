@@ -103,117 +103,85 @@ namespace libp2p_peerconnection
 		{
 			return -1;
 		}
-		//context_->network_thread()->Invoke<void>( RTC_FROM_HERE,[=](){
-			for (size_t i = 0; i < desc->contents_.size(); ++i) {
-				std::string mid = desc->contents_[i].name;
-				//ContentInfo content = desc->contents_[i];
-				RTC_LOG(LS_INFO) << desc->content_groups_[0].ToString();
-				if (/*desc->HasGroup(mid) &&*/ mid != desc->contents_[0].name) {
-					continue;
-				}
-
-			
-
-
-			
-					// 创建ICE transport
-				// RTCP, 默认开启a=rtcp:mux
-				//ice_agent_->CreateDtlsTransport(mid, 1); // 1: RTP
+		for (size_t i = 0; i < desc->contents_.size(); ++i) {
+			std::string mid = desc->contents_[i].name;
+			//ContentInfo content = desc->contents_[i];
+			RTC_LOG(LS_INFO) << desc->content_groups_[0].ToString();
+			if (/*desc->HasGroup(mid) &&*/ mid != desc->contents_[0].name) {
+				continue;
+			} 
+				// 创建ICE transport
+			// RTCP, 默认开启a=rtcp:mux
+			//ice_agent_->CreateDtlsTransport(mid, 1); // 1: RTP
 					
-				std::unique_ptr<DtlsSrtpTransport> dtls_srtp_transport;
-				std::unique_ptr<RtpTransport> unencrypted_rtp_transport;
-				std::unique_ptr<libice::DtlsTransportInternal> rtcp_dtls_transport;
-				std::unique_ptr<libmedia_transfer_protocol::SctpTransportInternal> sctp_transport;
-				std::unique_ptr<SrtpTransport> sdes_transport;
-				rtc::scoped_refptr<libice::IceTransportInterface> rtcp_ice;
-				rtc::scoped_refptr<libice::IceTransportInterface> ice ;
-				std::unique_ptr<libice::DtlsTransportInternal> rtp_dtls_transport;
-				libice::DtlsTransportInternal*   rtp_dtls_transport_;
-				libice::IceTransportInternal*  ice_p;
-				  network_thread_->Invoke< void>(RTC_FROM_HERE, [&] {
-					 ice = CreateIceTransport(desc->contents_[i].name, /*rtcp=*/false);
-						//  ice 
-						RTC_LOG(LS_INFO) << "create ice  name " << mid;
+			std::unique_ptr<DtlsSrtpTransport> dtls_srtp_transport;
+			std::unique_ptr<RtpTransport> unencrypted_rtp_transport;
+			std::unique_ptr<libice::DtlsTransportInternal> rtcp_dtls_transport;
+			std::unique_ptr<libmedia_transfer_protocol::SctpTransportInternal> sctp_transport;
+			std::unique_ptr<SrtpTransport> sdes_transport;
+			rtc::scoped_refptr<libice::IceTransportInterface> rtcp_ice;
+			rtc::scoped_refptr<libice::IceTransportInterface> ice ;
+			std::unique_ptr<libice::DtlsTransportInternal> rtp_dtls_transport;
+			libice::DtlsTransportInternal*   rtp_dtls_transport_;
+			libice::IceTransportInternal*  ice_p;
+				network_thread_->Invoke< void>(RTC_FROM_HERE, [&] {
+					ice = CreateIceTransport(desc->contents_[i].name, /*rtcp=*/false);
+					//  ice 
+					RTC_LOG(LS_INFO) << "create ice  name " << mid;
 						
-						ice_p = ice->internal();
-						rtp_dtls_transport =
-							CreateDtlsTransport(&desc->contents_[i], ice->internal());
+					ice_p = ice->internal();
+					rtp_dtls_transport =
+						CreateDtlsTransport(&desc->contents_[i], ice->internal());
 						
-						rtp_dtls_transport_ = rtp_dtls_transport.get();
-						rtp_dtls_transport_->SetDtlsRole(rtc::SSL_CLIENT);
-						dtls_srtp_transport = CreateDtlsSrtpTransport(
-							desc->contents_[i].name, rtp_dtls_transport.get(), rtcp_dtls_transport.get());
+					rtp_dtls_transport_ = rtp_dtls_transport.get();
+					rtp_dtls_transport_->SetDtlsRole(rtc::SSL_CLIENT);
+					dtls_srtp_transport = CreateDtlsSrtpTransport(
+						desc->contents_[i].name, rtp_dtls_transport.get(), rtcp_dtls_transport.get());
 
 
-						std::unique_ptr<JsepTransport> jsep_transport =
-							std::make_unique<JsepTransport>(
-								desc->contents_[i].name, certificate_, std::move(ice), std::move(rtcp_ice),
-								std::move(unencrypted_rtp_transport), std::move(sdes_transport),
-								std::move(dtls_srtp_transport), std::move(rtp_dtls_transport),
-								std::move(rtcp_dtls_transport), std::move(sctp_transport), [&]() {
-							RTC_DCHECK_RUN_ON(network_thread_);
-							UpdateAggregateStates_n();
-						});
-
-						jsep_transport->rtp_transport()->SignalRtcpPacketReceived.connect(
-							this, &transport_controller::OnRtcpPacketReceived_n);
-
-						transports_.RegisterTransport(desc->contents_[i].name, std::move(jsep_transport));
+					std::unique_ptr<JsepTransport> jsep_transport =
+						std::make_unique<JsepTransport>(
+							desc->contents_[i].name, certificate_, std::move(ice), std::move(rtcp_ice),
+							std::move(unencrypted_rtp_transport), std::move(sdes_transport),
+							std::move(dtls_srtp_transport), std::move(rtp_dtls_transport),
+							std::move(rtcp_dtls_transport), std::move(sctp_transport), [&]() {
+						RTC_DCHECK_RUN_ON(network_thread_);
 						UpdateAggregateStates_n();
-						 
 					});
 
+					jsep_transport->rtp_transport()->SignalRtcpPacketReceived.connect(
+						this, &transport_controller::OnRtcpPacketReceived_n);
+
+					transports_.RegisterTransport(desc->contents_[i].name, std::move(jsep_transport));
+					UpdateAggregateStates_n();
+						 
+				});
+
 
 					
 				
-				ices_.insert(std::make_pair(mid, ice_p));
-				dtls_transports_.insert(std::make_pair(mid, rtp_dtls_transport_));
-				//dtls_transports_[mid] = rtp_dtls_transport;
-				// 设置ICE param
-				libice::TransportInfo* td = desc->GetTransportInfoByName(mid);
-				if (td) 
-				{
-					libice::IceParameters  remote_ice_parameter;
-					remote_ice_parameter.pwd = td->description.ice_pwd;
-					remote_ice_parameter.ufrag = td->description.ice_ufrag;
-					//td->description.r
-					//content.media_description()
-				
+			ices_.insert(std::make_pair(mid, ice_p));
+			dtls_transports_.insert(std::make_pair(mid, rtp_dtls_transport_));
+				 
+			// 设置ICE param
+			libice::TransportInfo* td = desc->GetTransportInfoByName(mid);
+			if (td) 
+			{
+				libice::IceParameters  remote_ice_parameter;
+				remote_ice_parameter.pwd = td->description.ice_pwd;
+				remote_ice_parameter.ufrag = td->description.ice_ufrag;
+					  
+					network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this, remote_ice_parameter, ice_p, rtp_dtls_transport_ = rtp_dtls_transport_, td]() {
+						RTC_DCHECK_RUN_ON(network_thread_);
+						ice_p->SetRemoteIceParameters(remote_ice_parameter);
+						rtp_dtls_transport_->SetRemoteFingerprint(td->description.identity_fingerprint->algorithm,
+						td->description.identity_fingerprint->digest.cdata(),
+						td->description.identity_fingerprint->digest.size()
+					);
+				}));
 					 
-
-					 network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this, remote_ice_parameter, ice_p, rtp_dtls_transport_ = rtp_dtls_transport_, td]() {
-						 RTC_DCHECK_RUN_ON(network_thread_);
-						 ice_p->SetRemoteIceParameters(remote_ice_parameter);
-						 rtp_dtls_transport_->SetRemoteFingerprint(td->description.identity_fingerprint->algorithm,
-							td->description.identity_fingerprint->digest.cdata(),
-							td->description.identity_fingerprint->digest.size()
-						);
-					}));
-					//ice_agent_->SetRemoteIceParams(mid, 1, libice::IceParameters( td->ice_ufrag, td->ice_pwd));
-					//if (td->identity_fingerprint)
-					{
-						/*	 std::string  fingerprint((char *)td->identity_fingerprint->digest.data()
-							 , td->identity_fingerprint->digest.size());*/
-						//ice_agent_->SetRemoteFingerprint(td->alg
-						//	, td->fingerprint);
-
-						//ice_agent_->SetIceParams
-					}
-					//auto dtls = _get_dtls_transport(mid);
-					//if (dtls) {
-					//	dtls->set_remote_fingerprint(td->identity_fingerprint->algorithm,
-					//		td->identity_fingerprint->digest.cdata(),
-					//		td->identity_fingerprint->digest.size());
-					//}
-					//ice_agent_->UseDtlsSrtp(mid);
-				}
-
-				// 设置ICE candidate
-				/*for (auto candidate : content->candidates()) {
-					ice_agent_->AddRemoteCandidate(mid, 1, candidate);
-				}*/
-			}
-		//});
+			} 
+		} 
 		return 0;
 	}
 	int transport_controller::set_local_sdp(SessionDescription * desc, rtc::scoped_refptr<rtc::RTCCertificate> certificate)
@@ -228,17 +196,12 @@ namespace libp2p_peerconnection
 			if (mid != desc->contents_[0].name/*desc->HasGroup(mid) && mid != desc->content_groups_[0].semantics_*/) {
 				continue;
 			}
-			libice::TransportInfo* td = desc->GetTransportInfoByName(mid);
-			//auto td = desc->GetTransportInfo(mid);
-			if (td) {
-			/*	ice_agent_->SetIceParams(mid, 1,
-					ice::IceParameters(td->ice_ufrag, td->ice_pwd));*/
-
+			libice::TransportInfo* td = desc->GetTransportInfoByName(mid); 
+			if (td) { 
 				libice::IceParameters  local_ice_parameter;
 				local_ice_parameter.pwd = td->description.ice_pwd;
 				local_ice_parameter.ufrag = td->description.ice_ufrag;
-				//td->description.r
-				//content.media_description()
+			 
 
 				network_thread_->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [mid, local_ice_parameter, this, certificate]() {
 					RTC_DCHECK_RUN_ON(network_thread_);
@@ -254,25 +217,11 @@ namespace libp2p_peerconnection
 
 		 
 			if (network_thread_->IsCurrent())
-			{
-				//	context_->network_thread()->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this]() {
-
+			{ 
 				for (auto pi : ices_)
 				{
 					pi.second->MaybeStartGathering();
 				}
-				
-
-				
-					/*webrtc::RTCError error =
-						transports_->NegotiateDtlsRole(webrtc::SdpType,
-						local_description_->transport_desc.connection_role,
-						remote_description_->transport_desc.connection_role,
-						&negotiated_dtls_role);*/
-				//设置客户端或服务端状态 需要判断双方 连接状态
-				//dtls_transports_["audio"]->SetDtlsRole(rtc::SSL_CLIENT);
-
-				//}));
 			}
 			else
 			{
@@ -281,8 +230,7 @@ namespace libp2p_peerconnection
 					for (auto pi : ices_)
 					{
 						pi.second->MaybeStartGathering();
-					}
-					//dtls_transports_["audio"]->SetDtlsRole(rtc::SSL_CLIENT);
+					} 
 				}));
 			}
 		 
@@ -294,14 +242,11 @@ namespace libp2p_peerconnection
 	int transport_controller::set_remote_candidate(const libice::Candidate & candidate)
 	{
 		if (network_thread_->IsCurrent())
-		{
-			//	context_->network_thread()->PostTask(ToQueuedTask(signaling_thread_safety_.flag(), [this]() {
-			//ices_["audio"]->AddRemoteCandidate(candidate);
+		{ 
 			for (auto pi : ices_)
 			{
 				pi.second->AddRemoteCandidate(candidate);
-			}
-			//}));
+			} 
 		}
 		else
 		{

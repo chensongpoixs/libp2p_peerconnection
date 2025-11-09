@@ -55,7 +55,7 @@ namespace libp2p_peerconnection
 		virtual ~p2p_peer_connection();
 
 		int set_remote_sdp(const std::string& sdp);
-		std::string create_answer(const RTCOfferAnswerOptions& options,
+		std::string create_offer(const RTCOfferAnswerOptions& options,
 			const std::string& stream_id);
 	public:
 

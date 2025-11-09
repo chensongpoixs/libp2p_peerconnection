@@ -222,28 +222,7 @@ namespace libp2p_peerconnection
 	int p2p_peer_connection::set_remote_sdp(const std::string & sdp)
 	{
 
-		{
-			const uint64_t k_year_in_ms = 365 * 24 * 3600 * 1000L;
-			ice_param_ = libice::IceCredentialsIterator::CreateRandomIceCredentials();
-			//std::string cname = rtc::CreateRandomString(16);
-			rtc::KeyParams key_params;
-			RTC_LOG(LS_INFO) << "dtls enabled, key type: " << key_params.type();
-			certificate_ = rtc::RTCCertificateGenerator::GenerateCertificate(key_params,
-				k_year_in_ms);
-			//SSLFingerprint
-			if (certificate_)
-			{
-				rtc::RTCCertificatePEM pem = certificate_->ToPEM();
-				RTC_LOG(LS_INFO) << "rtc certificate: \n" << pem.certificate();
-				//certificate_ = certificate;
-				transport_controller_->set_certificeate(certificate_);
-			}
-			else
-			{
-				RTC_LOG(LS_WARNING) << " open  certificate failed !!!\n";
-			}
-		}
-		 
+		
 		
 		std::vector<std::string> fields;
 		// SDP用\n, \r\n来换行的
@@ -308,12 +287,6 @@ namespace libp2p_peerconnection
 				mid = items[0].substr(2);
 				
 				if (mid == "audio") {
-					//   const std::string& name,
-					//MediaProtocolType type,
-					
-					//content_info.type
-					//remote_desc_->AddContent(mid, libice::MediaProtocolType::kRtp,  std::move(audio_content));
-					//audio_content.reset(remote_desc_->GetContentByName(mid)->media_description());
 					audio_td.content_name = mid;
 					audio_content_info.name = mid;
 					audio_pt_ = std::atoi(items[3].c_str());
@@ -350,20 +323,7 @@ namespace libp2p_peerconnection
 				}
 			}
 		}
-		/*
-		
-		if (video_content) {
-			auto video_codecs = video_content->codecs();
-			if (!video_codecs.empty()) {
-				video_pt_ = video_codecs[0]->id;
-			}
-		
-			if (video_codecs.size() > 1) {
-				video_rtx_pt_ = video_codecs[1]->id;
-			}
-		}
-		*/
-
+		 
 
 
 		audio_content_info.description_ = std::move(audio_content);
@@ -383,26 +343,31 @@ namespace libp2p_peerconnection
 		
 		return 0;
 	}
-	std::string p2p_peer_connection::create_answer(const RTCOfferAnswerOptions & options, const std::string & stream_id)
-	{
-		//const uint64_t k_year_in_ms = 365 * 24 * 3600 * 1000L;
-		//libice::IceParameters ice_param = libice::IceCredentialsIterator::CreateRandomIceCredentials();
-		std::string cname = rtc::CreateRandomString(16);
-		//rtc::KeyParams key_params;
-		//RTC_LOG(LS_INFO) << "dtls enabled, key type: " << key_params.type();
-		//rtc::scoped_refptr<rtc::RTCCertificate> certificate = rtc::RTCCertificateGenerator::GenerateCertificate(key_params,
-		//	k_year_in_ms);
-		////SSLFingerprint
-		//if (certificate)
-		//{
-		//	rtc::RTCCertificatePEM pem = certificate->ToPEM();
-		//	RTC_LOG(LS_INFO) << "rtc certificate: \n" << pem.certificate();
-		//	//certificate_ = certificate;
-		//}
-		//else
-		//{
-		//	RTC_LOG(LS_WARNING) << " open  certificate failed !!!\n";
-		//}
+	std::string p2p_peer_connection::create_offer(const RTCOfferAnswerOptions & options, const std::string & stream_id)
+	{ 
+		 std::string cname = rtc::CreateRandomString(16);
+		 {
+			 const uint64_t k_year_in_ms = 365 * 24 * 3600 * 1000L;
+			 ice_param_ = libice::IceCredentialsIterator::CreateRandomIceCredentials();
+			 //std::string cname = rtc::CreateRandomString(16);
+			 rtc::KeyParams key_params;
+			 RTC_LOG(LS_INFO) << "dtls enabled, key type: " << key_params.type();
+			 certificate_ = rtc::RTCCertificateGenerator::GenerateCertificate(key_params,
+				 k_year_in_ms);
+			 //SSLFingerprint
+			 if (certificate_)
+			 {
+				 rtc::RTCCertificatePEM pem = certificate_->ToPEM();
+				 RTC_LOG(LS_INFO) << "rtc certificate: \n" << pem.certificate();
+				 //certificate_ = certificate;
+				 transport_controller_->set_certificeate(certificate_);
+			 }
+			 else
+			 {
+				 RTC_LOG(LS_WARNING) << " open  certificate failed !!!\n";
+			 }
+		 }
+
 		local_desc_ = std::make_unique <   SessionDescription >(/*webrtc::SdpType::kAnswer*/);
 		if (options.send_audio || options.recv_audio) {
 			auto audio_content = std::make_unique<AudioContentDescription>();
