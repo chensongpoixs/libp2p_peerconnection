@@ -208,7 +208,7 @@ libice::TransportInfo *SessionDescription::GetTransportInfoByName(const std::str
 	 for (size_t i = 0; i < media_content->codecs_.size(); ++i)
 	 {
 		 fmt.append(" ");
-		 fmt.append(std::to_string(codec.id));
+		 fmt.append(std::to_string(media_content->codecs_[i].id));
 	 }
 
 	 
