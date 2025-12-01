@@ -163,7 +163,12 @@ namespace libp2p_peerconnection
 			
 			transport_controller_ = std::make_unique<transport_controller>(context_->network_thread()
 				, context_->signaling_thread(), context_->default_network_manager(), 
-				context_->default_socket_factory());
+				#ifdef _MSC_VER
+			context_->default_socket_factory()
+			#else 	
+			nullptr
+			#endif //
+			);
 			transport_controller_->SignalIceTransportStateChanged.connect(this, & p2p_peer_connection::IceTransportStateChanged_n);
 			transport_controller_->SignalRtcpPacketReceived.connect(
 				this, & p2p_peer_connection::OnRtcpPacketReceived_n);
@@ -175,7 +180,12 @@ namespace libp2p_peerconnection
 				
 				transport_controller_ = std::make_unique<transport_controller>(context_->network_thread()
 					, context_->signaling_thread(), context_->default_network_manager(),
-					context_->default_socket_factory());
+					#ifdef _MSC_VER
+			context_->default_socket_factory()
+			#else 	
+			nullptr
+			#endif //
+				);
 				
 				transport_controller_->SignalIceTransportStateChanged.connect(this, & p2p_peer_connection::IceTransportStateChanged_n);
 				transport_controller_->SignalRtcpPacketReceived.connect(

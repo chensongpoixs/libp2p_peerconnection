@@ -78,10 +78,15 @@ class ConnectionContext
    // RTC_DCHECK_RUN_ON(signaling_thread_);
     return default_network_manager_.get();
   }
-  libice::BasicPacketSocketFactory* default_socket_factory() {
+  
+  #ifdef _MSC_VER
+		libice::BasicPacketSocketFactory* default_socket_factory() {
     //RTC_DCHECK_RUN_ON(signaling_thread_);
     return default_socket_factory_.get();
   }
+			#else 	
+			 
+			#endif //
   
  protected:
   explicit ConnectionContext();

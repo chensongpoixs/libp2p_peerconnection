@@ -103,8 +103,13 @@ ConnectionContext::ConnectionContext()
 		// always is injected (with no need to construct this default factory), or get
 		// the appropriate underlying SocketFactory without going through the
 		// rtc::Thread::socketserver() accessor.
-		default_socket_factory_ = std::make_unique<libice::BasicPacketSocketFactory>(
-			network_thread()->socketserver());
+		
+
+     #ifdef _MSC_VER
+		  default_socket_factory_ = std::make_unique<libice::BasicPacketSocketFactory>(
+		 	network_thread()->socketserver());
+			 
+			#endif //
 	}
 	else
 	{
@@ -122,9 +127,11 @@ ConnectionContext::ConnectionContext()
 			// always is injected (with no need to construct this default factory), or get
 			// the appropriate underlying SocketFactory without going through the
 			// rtc::Thread::socketserver() accessor.
-			default_socket_factory_ = std::make_unique<libice::BasicPacketSocketFactory>(
-				network_thread()->socketserver());
-
+		  #ifdef _MSC_VER
+		  default_socket_factory_ = std::make_unique<libice::BasicPacketSocketFactory>(
+		 	network_thread()->socketserver());
+			 
+			#endif //
 		});
 	}
 	

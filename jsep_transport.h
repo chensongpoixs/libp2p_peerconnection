@@ -225,7 +225,7 @@ namespace libp2p_peerconnection {
 			return rtp_dtls_transport_;
 		}
 
-		rtc::scoped_refptr<SctpTransport> SctpTransport() const {
+		rtc::scoped_refptr<libp2p_peerconnection::SctpTransport> SctpTransport() const {
 			return sctp_transport_;
 		}
 
